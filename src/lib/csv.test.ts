@@ -55,6 +55,10 @@ describe("rowsToCsv", () => {
         savedAt: "",
         fitScore: "",
         availableDetails: "",
+        status: "",
+        nextAction: "",
+        followUp: "",
+        notes: "",
       },
     ]);
     expect(csv).toContain('"Say ""hi"", Bob\nJr"');
@@ -79,6 +83,10 @@ describe("rowsToCsv", () => {
         savedAt: "",
         fitScore: "",
         availableDetails: "",
+        status: "",
+        nextAction: "",
+        followUp: "",
+        notes: "",
       },
     ]);
     expect(csv).toContain("'=HYPERLINK");
@@ -105,6 +113,10 @@ describe("rowsToCsv", () => {
         savedAt: "",
         fitScore: "",
         availableDetails: "",
+        status: "",
+        nextAction: "",
+        followUp: "",
+        notes: "",
       },
     ]);
     expect(csv).toContain("Plain Bakery,Bakery,Berlin,Germany,https://example.com");
@@ -212,7 +224,7 @@ describe("companyToRow / demoToRow", () => {
     const csv = rowsToCsv([]);
     const header = csv.trim();
     expect(header.startsWith("Name,Category,City")).toBe(true);
-    expect(header.endsWith("Saved at,Fit score,Available details")).toBe(true);
+    expect(header.endsWith("Saved at,Fit score,Available details,Status,Next action,Follow up,Notes")).toBe(true);
   });
 
   test("search-scope rows carry score with blank saved-at", () => {
@@ -220,5 +232,42 @@ describe("companyToRow / demoToRow", () => {
     expect(row.savedAt).toBe("");
     expect(row.fitScore).toBe("65");
     expect(row.availableDetails).toContain("website");
+  });
+
+  test("workflow columns export user labels, blank when unassigned", () => {
+    const withWorkflow = companyToRow(
+      company(),
+      "2026-01-01",
+      null,
+      { status: "qualified", nextAction: "email", followUpDate: "2026-11-01", notes: "Called once." },
+    );
+    expect(withWorkflow.status).toBe("Qualified");
+    expect(withWorkflow.nextAction).toBe("Email");
+    expect(withWorkflow.followUp).toBe("2026-11-01");
+    expect(withWorkflow.notes).toBe("Called once.");
+    const plain = companyToRow(company(), "2026-01-01");
+    expect([plain.status, plain.nextAction, plain.followUp, plain.notes]).toEqual(["", "", "", ""]);
+  });
+
+  test("saved export threads workflow through by record id", () => {
+    const rows = savedRecordsToRows(
+      [{ id: "demo:demo-01", kind: "demo", savedAt: "2026-01-01", demoId: "demo-01" }],
+      (demoId) =>
+        demoId === "demo-01"
+          ? {
+              id: "demo-01",
+              companyName: "Sample Co",
+              category: "Bakery",
+              city: "Berlin",
+              country: "Germany",
+              websiteAvailable: true,
+              phoneAvailable: false,
+            }
+          : undefined,
+      (recordId) => (recordId === "demo:demo-01" ? { status: "researching" as const } : undefined),
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("Researching");
+    expect(rows[0].availableDetails).toBe("website");
   });
 });

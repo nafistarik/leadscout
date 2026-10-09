@@ -1,35 +1,18 @@
-import { useCallback } from "react";
-import { STORAGE_KEYS } from "@/lib/storage";
+import { useCallback, useState } from "react";
+import { STORAGE_KEYS, readLocalStorage, safeJsonParse } from "@/lib/storage";
 import { useLocalStorageValue } from "@/hooks/use-local-storage-value";
-import { sanitizeWorkflowMap } from "@/lib/workflow";
+import { probeStorage } from "@/hooks/use-local-storage-value";
+import {
+  applyWorkflowPatch,
+  removeWorkflowField,
+  sanitizeWorkflowMap,
+} from "@/lib/workflow";
 import type {
   LeadStatus,
   LeadWorkflow,
   LeadWorkflowMap,
   NextAction,
 } from "@/types/workflow";
-
-function omit<K extends string>(obj: Record<K, unknown>, key: K): Partial<Record<K, unknown>> {
-  const clone: Partial<Record<K, unknown>> = { ...obj };
-  delete clone[key];
-  return clone;
-}
-
-function removeWorkflowKey(
-  workflows: LeadWorkflowMap,
-  recordId: string,
-  key: keyof LeadWorkflow,
-  setWorkflows: (next: LeadWorkflowMap) => void,
-): void {
-  const previous = workflows[recordId] ?? {};
-  const rest = omit(previous as Record<keyof LeadWorkflow, unknown>, key) as LeadWorkflow;
-  if (Object.keys(rest).length === 0) {
-    const remaining = omit(workflows as Record<string, LeadWorkflow>, recordId) as LeadWorkflowMap;
-    setWorkflows(remaining);
-  } else {
-  setWorkflows({ ...workflows, [recordId]: rest });
-  }
-}
 
 /**
  * User-assigned lead workflow metadata (status, notes, next action,
@@ -54,55 +37,74 @@ export function useLeadWorkflow() {
     [workflows],
   );
 
+  const [storageAvailable] = useState(probeStorage);
+
+  // Write base: freshly read storage when it works (so a stale tab edits
+  // per-record state without clobbering another tab's newer unrelated
+  // entries), or the in-memory session state when storage is unavailable
+  // (private mode), where the shared primitive already keeps session truth.
+  const readBase = useCallback((): LeadWorkflowMap => {
+    if (!storageAvailable) return workflows;
+    return sanitizeWorkflowMap(safeJsonParse(readLocalStorage(STORAGE_KEYS.leadWorkflow), {}));
+  }, [storageAvailable, workflows]);
+
   const patchWorkflow = useCallback(
     (recordId: string, patch: LeadWorkflow) => {
-      const previous = workflows[recordId] ?? {};
-      const merged: LeadWorkflow = { ...previous, ...patch };
-      if (Object.keys(merged).length === 0) return;
-      setWorkflows({ ...workflows, [recordId]: merged });
+      const next = applyWorkflowPatch(readBase(), recordId, patch);
+      if (next) setWorkflows(next);
     },
-    [workflows, setWorkflows],
+    [readBase, setWorkflows],
+  );
+
+  const removeField = useCallback(
+    (recordId: string, key: keyof LeadWorkflow) => {
+      const next = removeWorkflowField(readBase(), recordId, key);
+      if (next) setWorkflows(next);
+    },
+    [readBase, setWorkflows],
   );
 
   const setStatus = useCallback(
     (recordId: string, status: LeadStatus) => {
+      const current = readBase()[recordId]?.status;
+      if (current === status) return;
       patchWorkflow(recordId, { status, lastReviewedAt: new Date().toISOString() });
     },
-    [patchWorkflow],
+    [patchWorkflow, readBase],
   );
 
   const saveNotes = useCallback(
     (recordId: string, notes: string) => {
       const trimmed = notes.trim().slice(0, 2000);
       if (!trimmed) {
-        removeWorkflowKey(workflows, recordId, "notes", setWorkflows);
+        removeField(recordId, "notes");
         return;
       }
       patchWorkflow(recordId, { notes: trimmed, lastReviewedAt: new Date().toISOString() });
     },
-    [patchWorkflow, setWorkflows, workflows],
+    [patchWorkflow, removeField],
   );
 
   const setNextAction = useCallback(
     (recordId: string, nextAction: NextAction) => {
       if (nextAction === "none") {
-        removeWorkflowKey(workflows, recordId, "nextAction", setWorkflows);
+        removeField(recordId, "nextAction");
         return;
       }
       patchWorkflow(recordId, { nextAction });
     },
-    [patchWorkflow, setWorkflows, workflows],
+    [patchWorkflow, removeField],
   );
 
   const setFollowUpDate = useCallback(
     (recordId: string, followUpDate: string) => {
       if (!followUpDate) {
-        removeWorkflowKey(workflows, recordId, "followUpDate", setWorkflows);
+        removeField(recordId, "followUpDate");
         return;
       }
       patchWorkflow(recordId, { followUpDate });
     },
-    [patchWorkflow, setWorkflows, workflows],
+    [patchWorkflow, removeField],
   );
 
   return { workflows, getWorkflow, setStatus, saveNotes, setNextAction, setFollowUpDate };

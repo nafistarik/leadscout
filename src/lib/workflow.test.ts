@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
+  applyWorkflowPatch,
   buildQualificationChecklist,
   effectiveStatus,
   isOverdue,
   isValidDateString,
+  removeWorkflowField,
   sanitizeWorkflowMap,
   signalsFromCompany,
   signalsFromDemoLead,
@@ -86,6 +88,36 @@ describe("todayLocalYmd", () => {
   });
 });
 
+describe("applyWorkflowPatch / removeWorkflowField", () => {
+  test("patches merge per record without touching others", () => {
+    const base = {
+      a: { status: "researching" as const, notes: "keep" },
+      b: { status: "qualified" as const },
+    };
+    const patched = applyWorkflowPatch(base, "a", { status: "qualified" as const });
+    expect(patched?.a).toEqual({ status: "qualified", notes: "keep" });
+    expect(patched?.b).toBe(base.b);
+    // Empty patches and ids are no-ops.
+    expect(applyWorkflowPatch(base, "a", {})).toBeNull();
+    expect(applyWorkflowPatch(base, "", { status: "qualified" as const })).toBeNull();
+  });
+
+  test("removal drops empty entries and keeps the rest intact", () => {
+    const base = {
+      a: { status: "researching" as const, notes: "keep" },
+      b: { notes: "solo" },
+    };
+    const removed = removeWorkflowField(base, "a", "notes");
+    expect(removed?.a).toEqual({ status: "researching" });
+    expect(removed?.b).toBe(base.b);
+    const emptied = removeWorkflowField(base, "b", "notes");
+    expect(emptied && "b" in emptied).toBe(false);
+    expect(emptied?.a).toBe(base.a);
+    // Unknown records or keys are no-ops.
+    expect(removeWorkflowField(base, "missing", "notes")).toBeNull();
+    expect(removeWorkflowField(base, "a", "followUpDate" as never)).toBeNull();
+  });
+});
 describe("signals + qualification checklist", () => {
   test("derives signals from company records without invention", () => {
     const signals = signalsFromCompany({

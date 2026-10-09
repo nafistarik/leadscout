@@ -67,6 +67,39 @@ export function effectiveStatus(workflow: LeadWorkflow | undefined): LeadStatus 
 }
 
 /**
+ * Pure map transitions used by the workflow hook. Callers merge onto a
+ * freshly read map so concurrent tabs edit per-record state without
+ * clobbering each other's unrelated entries. Empty results mean "no change".
+ */
+export function applyWorkflowPatch(
+  map: LeadWorkflowMap,
+  recordId: string,
+  patch: LeadWorkflow,
+): LeadWorkflowMap | null {
+  if (!recordId || Object.keys(patch).length === 0) return null;
+  const merged: LeadWorkflow = { ...(map[recordId] ?? {}), ...patch };
+  if (Object.keys(merged).length === 0) return null;
+  return { ...map, [recordId]: merged };
+}
+
+export function removeWorkflowField(
+  map: LeadWorkflowMap,
+  recordId: string,
+  key: keyof LeadWorkflow,
+): LeadWorkflowMap | null {
+  const previous = map[recordId];
+  if (!previous || !(key in previous)) return null;
+  const rest: LeadWorkflow = { ...previous };
+  delete rest[key];
+  if (Object.keys(rest).length === 0) {
+    const remaining: LeadWorkflowMap = { ...map };
+    delete remaining[recordId];
+    return remaining;
+  }
+  return { ...map, [recordId]: rest };
+}
+
+/**
  * True when a follow-up date is set and lies strictly before the given
  * day (YYYY-MM-DD). A missing date is never overdue.
  */

@@ -77,7 +77,7 @@ export default function SavedLeadsClient() {
   }
 
   function handleExport() {
-    const rows = savedRecordsToRows(records, getLeadById);
+    const rows = savedRecordsToRows(records, getLeadById, getWorkflow);
     downloadCsv(rowsToCsv(rows), exportFilename());
   }
 

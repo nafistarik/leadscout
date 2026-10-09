@@ -1,5 +1,7 @@
 import type { DemoLead } from "@/types/lead";
 import type { Company, SavedLeadRecord } from "@/types/company";
+import { LEAD_STATUS_LABELS, NEXT_ACTION_LABELS } from "@/types/workflow";
+import type { LeadWorkflow } from "@/types/workflow";
 import { describeCompleteness, presentDetailsLabel } from "@/lib/completeness";
 import { normalizeWebsiteUrl } from "@/lib/links";
 
@@ -27,6 +29,10 @@ export const CSV_COLUMNS = [
   "Saved at",
   "Fit score",
   "Available details",
+  "Status",
+  "Next action",
+  "Follow up",
+  "Notes",
 ] as const;
 
 export interface CsvRow {
@@ -47,6 +53,24 @@ export interface CsvRow {
   fitScore: string;
   /** Present-field names (e.g. "website; phone"), else blank. */
   availableDetails: string;
+  /** User-assigned workflow metadata; blank when never assigned. */
+  status: string;
+  nextAction: string;
+  followUp: string;
+  notes: string;
+}
+
+/** User workflow columns, shared by company and demo rows. */
+function workflowColumns(workflow?: LeadWorkflow): Pick<CsvRow, "status" | "nextAction" | "followUp" | "notes"> {
+  return {
+    status: workflow?.status ? LEAD_STATUS_LABELS[workflow.status] : "",
+    nextAction:
+      workflow?.nextAction && workflow.nextAction !== "none"
+        ? NEXT_ACTION_LABELS[workflow.nextAction]
+        : "",
+    followUp: workflow?.followUpDate ?? "",
+    notes: workflow?.notes ?? "",
+  };
 }
 
 const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
@@ -65,7 +89,12 @@ function escapeField(value: string): string {
   return guarded;
 }
 
-export function companyToRow(company: Company, savedAt: string, fitScore: number | null = null): CsvRow {
+export function companyToRow(
+  company: Company,
+  savedAt: string,
+  fitScore: number | null = null,
+  workflow?: LeadWorkflow,
+): CsvRow {
   return {
     name: company.name,
     category: company.category,
@@ -82,10 +111,11 @@ export function companyToRow(company: Company, savedAt: string, fitScore: number
     savedAt,
     fitScore: fitScore === null ? "" : String(fitScore),
     availableDetails: presentDetailsLabel(describeCompleteness(company)),
+    ...workflowColumns(workflow),
   };
 }
 
-export function demoToRow(demo: DemoLead, savedAt: string): CsvRow {
+export function demoToRow(demo: DemoLead, savedAt: string, workflow?: LeadWorkflow): CsvRow {
   const details: string[] = [];
   if (demo.websiteAvailable) details.push("website");
   if (demo.phoneAvailable) details.push("phone");
@@ -105,20 +135,23 @@ export function demoToRow(demo: DemoLead, savedAt: string): CsvRow {
     savedAt,
     fitScore: "",
     availableDetails: details.join("; "),
+    ...workflowColumns(workflow),
   };
 }
 
 export function savedRecordsToRows(
   records: SavedLeadRecord[],
   demoById: (demoId: string) => DemoLead | undefined,
+  getWorkflow?: (recordId: string) => LeadWorkflow | undefined,
 ): CsvRow[] {
   const rows: CsvRow[] = [];
   for (const record of records) {
+    const workflow = getWorkflow?.(record.id);
     if (record.kind === "osm") {
-      rows.push(companyToRow(record.company, record.savedAt));
+      rows.push(companyToRow(record.company, record.savedAt, null, workflow));
     } else {
       const demo = demoById(record.demoId);
-      if (demo) rows.push(demoToRow(demo, record.savedAt));
+      if (demo) rows.push(demoToRow(demo, record.savedAt, workflow));
     }
   }
   return rows;
@@ -144,6 +177,10 @@ export function rowsToCsv(rows: CsvRow[]): string {
         row.savedAt,
         row.fitScore,
         row.availableDetails,
+        row.status,
+        row.nextAction,
+        row.followUp,
+        row.notes,
       ]
         .map(escapeField)
         .join(","),
