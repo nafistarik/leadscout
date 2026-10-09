@@ -1,4 +1,6 @@
 import type { Company } from "@/types/company";
+import { LEAD_STATUS_LABELS, NEXT_ACTION_LABELS } from "@/types/workflow";
+import type { LeadWorkflow } from "@/types/workflow";
 
 /**
  * Clipboard helpers for the lead-research workflow. All copying happens
@@ -13,8 +15,12 @@ export interface CopyResult {
 
 const NOT_AVAILABLE = "Not available";
 
-/** Multi-line research summary. Missing fields stay explicitly missing. */
-export function buildCompanySummary(company: Company): string {
+/**
+ * Multi-line research summary. Missing fields stay explicitly missing.
+ * An optional user workflow appends a clearly separated "Your research"
+ * section — source data and user notes are never mixed.
+ */
+export function buildCompanySummary(company: Company, workflow?: LeadWorkflow): string {
   const lines = [
     `${company.name} — ${company.category}`,
     company.locationLabel,
@@ -24,6 +30,16 @@ export function buildCompanySummary(company: Company): string {
     `Opening hours: ${company.openingHours ?? NOT_AVAILABLE}`,
     `Source: ${company.source}${company.sourceUrl ? ` (${company.sourceUrl})` : ""}`,
   ];
+  const research: string[] = [];
+  if (workflow?.status) research.push(`Status: ${LEAD_STATUS_LABELS[workflow.status]}`);
+  if (workflow?.nextAction && workflow.nextAction !== "none") {
+    research.push(`Next action: ${NEXT_ACTION_LABELS[workflow.nextAction]}`);
+  }
+  if (workflow?.followUpDate) research.push(`Follow up: ${workflow.followUpDate}`);
+  if (workflow?.notes) research.push(`Notes: ${workflow.notes}`);
+  if (research.length > 0) {
+    lines.push("", "Your research (local notes, not source data):", ...research);
+  }
   return lines.join("\n");
 }
 

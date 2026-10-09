@@ -5,19 +5,28 @@ import { Contact, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buildCompanySummary, buildContactText, copyText } from "@/lib/clipboard";
 import type { Company } from "@/types/company";
+import type { LeadWorkflow } from "@/types/workflow";
 
 /**
  * Research copy actions for a single company row. Both actions run only
  * from these buttons (user-triggered, Clipboard API safe) and report
  * honest success/failure feedback — never a claimed success on failure.
+ * An optional workflow appends the user's own status/notes to the summary
+ * in a clearly separated section.
  */
-export function ResearchActions({ company }: { company: Company }) {
+export function ResearchActions({
+  company,
+  workflow,
+}: {
+  company: Company;
+  workflow?: LeadWorkflow;
+}) {
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const contactText = buildContactText(company);
 
   async function handleCopy(kind: "summary" | "contact") {
-    const text = kind === "summary" ? buildCompanySummary(company) : contactText;
+    const text = kind === "summary" ? buildCompanySummary(company, workflow) : contactText;
     if (!text) return;
     setBusy(true);
     setStatus(null);
@@ -42,7 +51,7 @@ export function ResearchActions({ company }: { company: Company }) {
           disabled={busy}
           onClick={() => void handleCopy("summary")}
           aria-label={`Copy research summary for ${company.name}`}
-          title="Copy name, category, location, contacts, and source"
+          title="Copy name, category, location, contacts, source, and your research notes"
         >
           <Copy className="h-3.5 w-3.5" aria-hidden="true" />
           Summary

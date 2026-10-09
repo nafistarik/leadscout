@@ -65,11 +65,12 @@ export default function SettingsClient() {
       window.localStorage.removeItem(STORAGE_KEYS.savedLeadsV2);
       window.localStorage.removeItem(STORAGE_KEYS.lists);
       window.localStorage.removeItem(STORAGE_KEYS.searchPresets);
+      window.localStorage.removeItem(STORAGE_KEYS.leadWorkflow);
       // Notify subscribers: direct removals bypass the storage hooks'
       // writers, so without this the UI would show stale data until refresh.
       notifyStorageChanged();
       setResetMessage(
-        "Local data cleared. Saved leads, lists, and saved search setups were removed from this browser.",
+        "Local data cleared. Saved leads, lists, saved search setups, and lead research data were removed from this browser.",
       );
     } catch {
       setResetMessage("Could not access browser storage in this session. Nothing was changed.");

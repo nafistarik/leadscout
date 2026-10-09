@@ -42,6 +42,27 @@ describe("buildCompanySummary", () => {
     expect(summary).toContain("Website: https://a.example");
     expect(summary).toContain("Email: Not available");
     expect(summary).toContain("Source: OpenStreetMap (https://www.openstreetmap.org/node/1)");
+    expect(summary).not.toContain("Your research");
+  });
+
+  test("appends user workflow in a separated section without mixing sources", () => {
+    const summary = buildCompanySummary(company(), {
+      status: "qualified",
+      notes: "Called once, asked to email.",
+      nextAction: "email",
+      followUpDate: "2026-11-01",
+    });
+    expect(summary).toContain("Your research (local notes, not source data):");
+    expect(summary).toContain("Status: Qualified");
+    expect(summary).toContain("Next action: Email");
+    expect(summary).toContain("Follow up: 2026-11-01");
+    expect(summary).toContain("Notes: Called once, asked to email.");
+    // Source section stays intact and separate.
+    expect(summary.indexOf("Source:")).toBeLessThan(summary.indexOf("Your research"));
+  });
+
+  test("omits the research section when no workflow exists", () => {
+    expect(buildCompanySummary(company(), {})).not.toContain("Your research");
   });
 });
 

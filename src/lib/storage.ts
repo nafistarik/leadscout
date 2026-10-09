@@ -14,6 +14,8 @@ export const STORAGE_KEYS = {
   geocodeCache: "leadscout.geocodeCache.v1",
   /** Part 4: named search presets (non-sensitive criteria only). */
   searchPresets: "leadscout.searchPresets.v1",
+  /** Part 7: user-assigned workflow metadata keyed by saved-lead record id. */
+  leadWorkflow: "leadscout.leadWorkflow.v1",
 } as const;
 
 export function readLocalStorage(key: string): string | null {

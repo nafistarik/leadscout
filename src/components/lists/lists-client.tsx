@@ -11,8 +11,11 @@ import { EmptyState } from "@/components/ui/feedback";
 import { TextInput } from "@/components/ui/field";
 import { SAMPLE_LIST, getLeadById } from "@/data/demo-leads";
 import { useLeadLists } from "@/hooks/use-lead-lists";
+import { useLeadWorkflow } from "@/hooks/use-lead-workflow";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
 import { resolveLeadDisplay } from "@/lib/saved-leads";
+import { effectiveStatus } from "@/lib/workflow";
+import { StatusBadge } from "@/components/workflow/lead-workflow-panel";
 import type { SavedLeadRecord } from "@/types/company";
 import type { LeadList } from "@/types/lead";
 
@@ -41,6 +44,7 @@ function MemberList({
 }) {
   const [selected, setSelected] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
+  const { getWorkflow } = useLeadWorkflow();
 
   const demoNameById = (demoId: string): string | undefined => getLeadById(demoId)?.companyName;
   const companyById = (companyId: string) => {
@@ -96,6 +100,9 @@ function MemberList({
                 ) : (
                   <Badge tone="warning">Removed</Badge>
                 )}
+                {member.kind !== "missing" ? (
+                  <StatusBadge status={effectiveStatus(getWorkflow(member.id))} />
+                ) : null}
               </span>
               <button
                 type="button"

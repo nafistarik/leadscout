@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { BookmarkX, Download } from "lucide-react";
 import { CompanyTable } from "@/components/companies/company-table";
 import { ResearchActions } from "@/components/companies/research-actions";
@@ -11,11 +12,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState, SectionHeading } from "@/components/ui/feedback";
 import { OsmAttribution } from "@/components/osm-attribution";
+import { LeadWorkflowPanel } from "@/components/workflow/lead-workflow-panel";
 import { getLeadById } from "@/data/demo-leads";
+import { useLeadWorkflow } from "@/hooks/use-lead-workflow";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
 import { downloadCsv, exportFilename, rowsToCsv, savedRecordsToRows } from "@/lib/csv";
+import { effectiveStatus, signalsFromCompany, signalsFromDemoLead } from "@/lib/workflow";
+import { LEAD_STATUS_LABELS, LEAD_STATUSES } from "@/types/workflow";
+import type { LeadStatus } from "@/types/workflow";
 import { toDemoRecordId } from "@/types/company";
 import type { Company } from "@/types/company";
+
+type StatusFilter = LeadStatus | "all";
 
 export default function SavedLeadsClient() {
   const {
@@ -28,18 +36,37 @@ export default function SavedLeadsClient() {
     removeSaved,
   } = useSavedLeads();
 
-  const companyRecords = records.filter((record) => record.kind === "osm");
-  const demoRecords = records.filter((record) => record.kind === "demo");
-  const demoLeads = demoRecords
-    .map((record) => (record.kind === "demo" ? getLeadById(record.demoId) : undefined))
-    .filter((lead): lead is NonNullable<typeof lead> => lead !== undefined);
-  const companies: Company[] = companyRecords.map((record) =>
+  const { getWorkflow } = useLeadWorkflow();
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
+  const matchesStatusFilter = (recordId: string): boolean =>
+    statusFilter === "all" || effectiveStatus(getWorkflow(recordId)) === statusFilter;
+
+  const visibleCompanyRecords = records.filter(
+    (record) => record.kind === "osm" && matchesStatusFilter(record.id),
+  );
+  const visibleDemoRecords = records.filter(
+    (record) =>
+      record.kind === "demo" &&
+      matchesStatusFilter(record.id) &&
+      getLeadById(record.demoId) !== undefined,
+  );
+  const companies: Company[] = visibleCompanyRecords.map((record) =>
     record.kind === "osm" ? record.company : (null as never),
   );
+  const demoLeads = visibleDemoRecords
+    .map((record) => (record.kind === "demo" ? getLeadById(record.demoId) : undefined))
+    .filter((lead): lead is NonNullable<typeof lead> => lead !== undefined);
   // References that no longer resolve (e.g. demo ids from an older dataset):
-  // surfaced explicitly instead of silently dropped from counts.
+  // surfaced explicitly instead of silently dropped from counts. Status
+  // filtering only hides rows; it never counts them as stale.
   const displayedCount = companies.length + demoLeads.length;
-  const staleCount = records.length - displayedCount;
+  const resolvableCount = records.filter(
+    (record) =>
+      record.kind === "osm" ||
+      (record.kind === "demo" && getLeadById(record.demoId) !== undefined),
+  ).length;
+  const staleCount = records.length - resolvableCount;
 
   function handlePruneStale() {
     for (const record of records) {
@@ -111,20 +138,60 @@ export default function SavedLeadsClient() {
       {displayedCount === 0 ? (
         <EmptyState
           icon={<BookmarkX className="h-6 w-6" aria-hidden="true" />}
-          title={records.length === 0 ? "No saved leads yet" : "Saved leads can't be shown"}
+          title={
+            records.length === 0
+              ? "No saved leads yet"
+              : statusFilter !== "all" && resolvableCount > 0
+                ? `No leads marked “${LEAD_STATUS_LABELS[statusFilter]}”`
+                : "Saved leads can't be shown"
+          }
           description={
             records.length === 0
               ? "Save promising companies from the Find Companies page — live OpenStreetMap results or demo records. Saved leads reappear here after a page refresh because they are stored locally. When you have saved leads, you can export them as CSV."
-              : "Your saved references no longer resolve to known records (for example, after a dataset change). You can remove them with the button above."
+              : statusFilter !== "all" && resolvableCount > 0
+                ? "No saved leads currently carry this status. Clear the status filter or assign the status from a lead's research panel."
+                : "Your saved references no longer resolve to known records (for example, after a dataset change). You can remove them with the button above."
           }
           action={
-            <Link href="/find-companies">
-              <Button>Find Companies</Button>
-            </Link>
+            statusFilter !== "all" && resolvableCount > 0 ? (
+              <Button variant="secondary" onClick={() => setStatusFilter("all")}>
+                Clear status filter
+              </Button>
+            ) : (
+              <Link href="/find-companies">
+                <Button>Find Companies</Button>
+              </Link>
+            )
           }
         />
       ) : (
         <>
+          <section aria-label="Filter saved leads">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <label htmlFor="saved-status-filter" className="text-[13px] font-medium text-ink2">
+                Show leads with status
+              </label>
+              <select
+                id="saved-status-filter"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+                className="neu-recessed h-9 cursor-pointer rounded-lg border border-line-soft bg-recessed px-2 text-[13px] text-ink"
+              >
+                <option value="all">All statuses</option>
+                {LEAD_STATUSES.map((option) => (
+                  <option key={option} value={option}>
+                    {LEAD_STATUS_LABELS[option]}
+                  </option>
+                ))}
+              </select>
+              {statusFilter !== "all" ? (
+                <span className="text-xs text-ink3">
+                  Showing {displayedCount} of {resolvableCount} saved{" "}
+                  {resolvableCount === 1 ? "lead" : "leads"}
+                </span>
+              ) : null}
+            </div>
+          </section>
           {companies.length > 0 ? (
             <section aria-labelledby="saved-osm-heading">
               <SectionHeading
@@ -142,7 +209,12 @@ export default function SavedLeadsClient() {
                 extraActions={(company) => (
                   <div className="flex flex-col items-end gap-2">
                     <AddToListControl leadId={company.id} leadName={company.name} />
-                    <ResearchActions company={company} />
+                    <ResearchActions company={company} workflow={getWorkflow(company.id)} />
+                    <LeadWorkflowPanel
+                      recordId={company.id}
+                      leadName={company.name}
+                      signals={signalsFromCompany(company)}
+                    />
                   </div>
                 )}
                 caption="Saved OpenStreetMap leads"
@@ -168,7 +240,14 @@ export default function SavedLeadsClient() {
                 isSaved={isDemoSaved}
                 onToggleSaved={toggleDemo}
                 extraActions={(lead) => (
-                  <AddToListControl leadId={toDemoRecordId(lead.id)} leadName={lead.companyName} />
+                  <div className="flex flex-col items-end gap-2">
+                    <AddToListControl leadId={toDemoRecordId(lead.id)} leadName={lead.companyName} />
+                    <LeadWorkflowPanel
+                      recordId={toDemoRecordId(lead.id)}
+                      leadName={lead.companyName}
+                      signals={signalsFromDemoLead(lead)}
+                    />
+                  </div>
                 )}
                 caption="Saved demo leads"
               />

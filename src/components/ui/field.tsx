@@ -1,4 +1,9 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import type {
+  InputHTMLAttributes,
+  ReactNode,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from "react";
 import { cn } from "@/lib/storage";
 
 const FIELD_STYLES =
@@ -35,4 +40,13 @@ export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
 
 export function SelectInput(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return <select {...props} className={cn(FIELD_STYLES, "cursor-pointer", props.className)} />;
+}
+
+export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      {...props}
+      className={cn(FIELD_STYLES, "h-auto min-h-20 py-2", props.className)}
+    />
+  );
 }
