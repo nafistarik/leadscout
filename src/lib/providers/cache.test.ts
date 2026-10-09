@@ -31,6 +31,22 @@ describe("TtlCache", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(cache.get("k")).toBeUndefined();
   });
+
+  test("evicts oldest entries beyond the cap and refreshes on rewrite", () => {
+    const cache = new TtlCache<string>(60_000, 2);
+    cache.set("a", "1");
+    cache.set("b", "2");
+    cache.set("c", "3");
+    expect(cache.get("a")).toBeUndefined();
+    expect(cache.get("b")).toBe("2");
+    expect(cache.get("c")).toBe("3");
+    // Rewriting an existing key refreshes it instead of evicting a neighbor.
+    cache.set("b", "2b");
+    cache.set("d", "4");
+    expect(cache.get("b")).toBe("2b");
+    expect(cache.get("c")).toBeUndefined();
+    expect(cache.get("d")).toBe("4");
+  });
 });
 
 describe("InflightDeduper", () => {

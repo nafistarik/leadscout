@@ -55,6 +55,7 @@ import {
   filtersToSearchParams,
   restoredSearchKey,
   searchParamsToFilters,
+  writtenUrlKey,
 } from "@/lib/search-params";
 import type { SearchMode } from "@/lib/search-params";
 
@@ -140,11 +141,19 @@ export function LiveSearchSection({
     ...(restored.mode === "live" ? restored.filters : { ...EMPTY_FILTERS, country: "" }),
   }));
   const [appliedKey, setAppliedKey] = useState(restoredKey);
+  // Keys of URLs this section wrote itself: landing navigations that match
+  // are acknowledged, never adopted, so post-submit keystrokes survive.
+  const [writtenKey, setWrittenKey] = useState<string | null>(null);
   if (appliedKey !== restoredKey) {
-    setAppliedKey(restoredKey);
-    if (restored.mode === "live") {
-      const next = { ...restored.filters };
-      if (JSON.stringify(next) !== JSON.stringify(filters)) setFilters(next);
+    if (writtenKey !== null && writtenKey === restoredKey) {
+      setWrittenKey(null);
+      setAppliedKey(restoredKey);
+    } else {
+      setAppliedKey(restoredKey);
+      if (restored.mode === "live") {
+        const next = { ...restored.filters };
+        if (JSON.stringify(next) !== JSON.stringify(filters)) setFilters(next);
+      }
     }
   }
   const [showScores, setShowScores] = useState(true);
@@ -159,6 +168,7 @@ export function LiveSearchSection({
     router.replace(`/find-companies?${filtersToSearchParams("live", snapshot).toString()}`, {
       scroll: false,
     });
+    setWrittenKey(writtenUrlKey(filtersToSearchParams("live", snapshot)));
     search(snapshot);
   }
 
@@ -166,6 +176,7 @@ export function LiveSearchSection({
     setFilters({ ...EMPTY_FILTERS, country: "" });
     reset();
     router.replace("/find-companies", { scroll: false });
+    setWrittenKey(writtenUrlKey(new URLSearchParams()));
   }
 
   function handleScoresToggle(visible: boolean) {
@@ -429,7 +440,12 @@ export function LiveSearchSection({
               onApply={(presetMode, presetFilters) => {
                 // Same-mode presets fill this form directly (no fetch until
                 // submit); cross-mode presets are routed through the parent.
-                if (presetMode === "live") setFilters({ ...presetFilters });
+                if (presetMode === "live") {
+                  setFilters({ ...presetFilters });
+                  setWrittenKey(writtenUrlKey(
+                    filtersToSearchParams("live", presetFilters),
+                  ));
+                }
                 onApplyPreset(presetMode, presetFilters);
               }}
             />

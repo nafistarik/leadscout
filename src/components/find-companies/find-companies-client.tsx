@@ -38,6 +38,7 @@ import {
   filtersToSearchParams,
   restoredSearchKey,
   searchParamsToFilters,
+  writtenUrlKey,
 } from "@/lib/search-params";
 import type { SearchMode } from "@/lib/search-params";
 import { cn } from "@/lib/storage";
@@ -94,6 +95,10 @@ export function FindCompaniesClient() {
   const restoredKey = restoredSearchKey(restored);
   const [mode, setMode] = useState<SearchMode>(restored.mode);
   const [appliedKey, setAppliedKey] = useState(restoredKey);
+  // Keys of URLs this component wrote itself (submit/reset/preset). When
+  // such a navigation lands, it must be acknowledged — never adopted as
+  // external state — so keystrokes typed after submitting are not clobbered.
+  const [writtenKey, setWrittenKey] = useState<string | null>(null);
 
   // Demo-mode form state (Part 1 behavior, extended with local refinements).
   // Demo records carry no email/opening-hours data and no scores, so those
@@ -117,23 +122,28 @@ export function FindCompaniesClient() {
       : null,
   );
   if (appliedKey !== restoredKey) {
-    setAppliedKey(restoredKey);
-    setMode(restored.mode);
-    if (restored.mode === "demo") {
-      const next: LeadSearchFilters = {
-        ...restored.filters,
-        hasEmail: false,
-        hasOpeningHours: false,
-        minScore: 0,
-        sort: restored.filters.sort === "score" ? "provider" : restored.filters.sort,
-      };
-      if (JSON.stringify(next) !== JSON.stringify(filters)) setFilters(next);
-      // Adopt restored submissions (e.g. shared links, back button) without
-      // refetching: demo filtering is synchronous and deterministic.
-      if (hasActiveProviderCriteria(restored.filters)) {
-        if (JSON.stringify(next) !== JSON.stringify(submitted)) setSubmitted(next);
-      } else if (submitted !== null) {
-        setSubmitted(null);
+    if (writtenKey !== null && writtenKey === restoredKey) {
+      setWrittenKey(null);
+      setAppliedKey(restoredKey);
+    } else {
+      setAppliedKey(restoredKey);
+      setMode(restored.mode);
+      if (restored.mode === "demo") {
+        const next: LeadSearchFilters = {
+          ...restored.filters,
+          hasEmail: false,
+          hasOpeningHours: false,
+          minScore: 0,
+          sort: restored.filters.sort === "score" ? "provider" : restored.filters.sort,
+        };
+        if (JSON.stringify(next) !== JSON.stringify(filters)) setFilters(next);
+        // Adopt restored submissions (e.g. shared links, back button) without
+        // refetching: demo filtering is synchronous and deterministic.
+        if (hasActiveProviderCriteria(restored.filters)) {
+          if (JSON.stringify(next) !== JSON.stringify(submitted)) setSubmitted(next);
+        } else if (submitted !== null) {
+          setSubmitted(null);
+        }
       }
     }
   }
@@ -194,6 +204,7 @@ export function FindCompaniesClient() {
     router.replace(`/find-companies?${filtersToSearchParams("demo", snapshot).toString()}`, {
       scroll: false,
     });
+    setWrittenKey(writtenUrlKey(filtersToSearchParams("demo", snapshot)));
     setSubmitted(snapshot);
   }
 
@@ -201,6 +212,7 @@ export function FindCompaniesClient() {
     setFilters(EMPTY_FILTERS);
     setSubmitted(null);
     router.replace("/find-companies", { scroll: false });
+    setWrittenKey(writtenUrlKey(new URLSearchParams()));
   }
 
   function handleExportDemo() {
@@ -219,6 +231,7 @@ export function FindCompaniesClient() {
       `/find-companies?${filtersToSearchParams(presetMode, presetFilters).toString()}`,
       { scroll: false },
     );
+    setWrittenKey(writtenUrlKey(filtersToSearchParams(presetMode, presetFilters)));
     if (presetMode !== mode) setMode(presetMode);
     if (presetMode === "demo") {
       const next: LeadSearchFilters = {

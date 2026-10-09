@@ -4,6 +4,7 @@ import {
   filtersToSearchParams,
   restoredSearchKey,
   searchParamsToFilters,
+  writtenUrlKey,
 } from "@/lib/search-params";
 
 function params(query: string): URLSearchParams {
@@ -100,5 +101,24 @@ describe("restoredSearchKey", () => {
     const a = restoredSearchKey(searchParamsToFilters(params("city=Berlin")));
     const b = restoredSearchKey(searchParamsToFilters(params("city=%20Berlin%20")));
     expect(a).toBe(b);
+  });
+
+  test("written keys match the landing parse (own-write recognition)", () => {
+    const filters = {
+      ...EMPTY_FILTERS,
+      country: "Germany",
+      city: "Berlin",
+      keyword: "rye",
+    };
+    const written = writtenUrlKey(filtersToSearchParams("live", filters));
+    const landing = restoredSearchKey(
+      searchParamsToFilters(filtersToSearchParams("live", filters)),
+    );
+    expect(written).toBe(landing);
+    // A different state never matches.
+    const other = restoredSearchKey(
+      searchParamsToFilters(params("mode=live&country=Germany&city=Munich")),
+    );
+    expect(written).not.toBe(other);
   });
 });

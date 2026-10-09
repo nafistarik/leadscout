@@ -16,7 +16,10 @@ interface CacheEntry<T> {
 export class TtlCache<T> {
   private entries = new Map<string, CacheEntry<T>>();
 
-  constructor(private readonly ttlMs: number) {}
+  constructor(
+    private readonly ttlMs: number,
+    private readonly maxEntries: number = Infinity,
+  ) {}
 
   get(key: string): T | undefined {
     const entry = this.entries.get(key);
@@ -29,6 +32,15 @@ export class TtlCache<T> {
   }
 
   set(key: string, value: T): void {
+    // Evict oldest entries first (Map preserves insertion order) so a long
+    // session of distinct searches cannot grow memory without bound.
+    // Refreshing an existing key must not evict: delete + re-insert it.
+    if (this.entries.has(key)) this.entries.delete(key);
+    while (this.entries.size >= this.maxEntries) {
+      const oldest = this.entries.keys().next();
+      if (oldest.done) break;
+      this.entries.delete(oldest.value);
+    }
     this.entries.set(key, { expiresAt: Date.now() + this.ttlMs, value });
   }
 

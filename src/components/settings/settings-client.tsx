@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { STORAGE_KEYS, readLocalStorage } from "@/lib/storage";
 import { sanitizeRecords } from "@/lib/saved-leads";
+import { notifyStorageChanged } from "@/hooks/use-local-storage-value";
 import { useTheme } from "@/hooks/use-theme";
 import type { ThemeMode } from "@/hooks/use-theme";
 
@@ -63,7 +64,13 @@ export default function SettingsClient() {
       window.localStorage.removeItem(STORAGE_KEYS.savedLeads);
       window.localStorage.removeItem(STORAGE_KEYS.savedLeadsV2);
       window.localStorage.removeItem(STORAGE_KEYS.lists);
-      setResetMessage("Local data cleared. Saved leads and your lists were removed from this browser.");
+      window.localStorage.removeItem(STORAGE_KEYS.searchPresets);
+      // Notify subscribers: direct removals bypass the storage hooks'
+      // writers, so without this the UI would show stale data until refresh.
+      notifyStorageChanged();
+      setResetMessage(
+        "Local data cleared. Saved leads, lists, and saved search setups were removed from this browser.",
+      );
     } catch {
       setResetMessage("Could not access browser storage in this session. Nothing was changed.");
     }

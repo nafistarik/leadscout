@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { sanitizeLists } from "@/hooks/use-lead-lists";
 import {
   applyAddToList,
   applyCreateList,
@@ -99,5 +100,24 @@ describe("applyAddToList / applyRemoveFromList", () => {
     expect(removed[0].leadIds).toEqual(["b"]);
     expect(removed[1].leadIds).toEqual(["a"]);
     expect(applyRemoveFromList(removed, "l1", "a")[0].leadIds).toEqual(["b"]);
+  });
+});
+
+describe("sanitizeLists", () => {
+  test("drops malformed lists and dedupes member ids", () => {
+    const cleaned = sanitizeLists([
+      { id: "l1", name: "A", leadIds: ["a", "a", "b", 42, null] },
+      { id: 7, name: "Bad", leadIds: [] },
+      null,
+    ]);
+    expect(cleaned).toHaveLength(1);
+    expect(cleaned[0].leadIds).toEqual(["a", "b"]);
+  });
+
+  test("rejects non-arrays and fills missing timestamps", () => {
+    expect(sanitizeLists(null)).toEqual([]);
+    expect(sanitizeLists("junk")).toEqual([]);
+    const cleaned = sanitizeLists([{ id: "l1", name: "A", leadIds: [] }]);
+    expect(typeof cleaned[0].createdAt).toBe("string");
   });
 });

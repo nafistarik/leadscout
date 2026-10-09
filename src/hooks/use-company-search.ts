@@ -111,6 +111,12 @@ export function useCompanySearch(debounceMs = 300): CompanySearchState {
   const retry = useCallback(() => {
     const filters = lastFiltersRef.current;
     if (filters) {
+      // Cancel any still-pending debounced submission first: it carries the
+      // same filters and would otherwise duplicate this request, then abort it.
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
       requestIdRef.current += 1;
       void run(requestIdRef.current, filters);
     }

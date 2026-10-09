@@ -100,3 +100,14 @@ export function filtersToSearchParams(mode: SearchMode, filters: LeadSearchFilte
 export function restoredSearchKey(restored: RestoredSearch): string {
   return JSON.stringify(restored);
 }
+
+/**
+ * Key for a URL the app itself just wrote (submit/reset/preset). Computed
+ * from the serialized parameters — exactly what the landing navigation will
+ * parse — so the sync logic can recognize its own writes and must never
+ * treat them as external state to adopt (which would clobber keystrokes
+ * typed after submitting).
+ */
+export function writtenUrlKey(params: URLSearchParams): string {
+  return restoredSearchKey(searchParamsToFilters(params));
+}

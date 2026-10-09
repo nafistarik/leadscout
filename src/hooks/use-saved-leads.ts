@@ -43,13 +43,29 @@ function readRecords(): SavedLeadRecord[] {
     cacheReady = true;
     return value;
   }
+  if (cacheReady && cache.raw !== null) {
+    // Key deleted externally after holding data (e.g. Settings reset):
+    // never resurrect the stale cache.
+    cache.raw = null;
+    cache.value = [];
+    return [];
+  }
   if (!migrationAttempted) {
     migrationAttempted = true;
-    const migrated = migrateLegacySavedLeads(new Date().toISOString());
-    cache.raw = readLocalStorage(STORAGE_KEYS.savedLeadsV2);
-    cache.value = migrated;
+    if (readLocalStorage(STORAGE_KEYS.savedLeads) !== null) {
+      const migrated = migrateLegacySavedLeads(new Date().toISOString());
+      cache.raw = readLocalStorage(STORAGE_KEYS.savedLeadsV2);
+      cache.value = migrated;
+      cacheReady = true;
+      return migrated;
+    }
+    // No legacy data: preserve any session state written while storage was
+    // unavailable (private mode), instead of discarding it.
+    if (cacheReady) return cache.value;
+    cache.raw = null;
+    cache.value = [];
     cacheReady = true;
-    return migrated;
+    return [];
   }
   if (cacheReady) return cache.value;
   cache.raw = null;
@@ -65,6 +81,22 @@ function writeRecords(next: SavedLeadRecord[]): void {
   cache.value = next;
   cacheReady = true;
   notifyStorageChanged();
+}
+
+/**
+ * Test seams for the store lifecycle (see saved-leads-store.test.ts):
+ * direct access to the real reader plus a module-state reset so each test
+ * starts from a clean store.
+ */
+export function readSavedLeadRecordsForTests(): SavedLeadRecord[] {
+  return readRecords();
+}
+
+export function resetSavedLeadStoreForTests(): void {
+  cache.raw = null;
+  cache.value = [];
+  cacheReady = false;
+  migrationAttempted = false;
 }
 
 export function useSavedLeads() {

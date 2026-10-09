@@ -13,7 +13,7 @@ import type { LeadList } from "@/types/lead";
 
 export type { ListActionResult };
 
-function sanitizeLists(value: unknown): LeadList[] {
+export function sanitizeLists(value: unknown): LeadList[] {
   if (!Array.isArray(value)) return [];
   return value
     .filter(
@@ -28,7 +28,11 @@ function sanitizeLists(value: unknown): LeadList[] {
       id: item.id,
       name: item.name,
       createdAt: typeof item.createdAt === "string" ? item.createdAt : new Date().toISOString(),
-      leadIds: item.leadIds.filter((id): id is string => typeof id === "string"),
+      // Dedupe defensively: hand-edited storage could otherwise render
+      // duplicate member rows (and duplicate React keys).
+      leadIds: [
+        ...new Set(item.leadIds.filter((id): id is string => typeof id === "string")),
+      ],
     }));
 }
 

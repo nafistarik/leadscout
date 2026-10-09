@@ -214,4 +214,11 @@ describe("companyToRow / demoToRow", () => {
     expect(header.startsWith("Name,Category,City")).toBe(true);
     expect(header.endsWith("Saved at,Fit score,Available details")).toBe(true);
   });
+
+  test("search-scope rows carry score with blank saved-at", () => {
+    const row = companyToRow(company({ website: "https://a.example" }), "", 65);
+    expect(row.savedAt).toBe("");
+    expect(row.fitScore).toBe("65");
+    expect(row.availableDetails).toContain("website");
+  });
 });

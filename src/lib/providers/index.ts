@@ -22,8 +22,10 @@ import { ProviderError } from "@/lib/providers/types";
  * - Caching reduces load on public APIs but never guarantees availability.
  */
 const RESULT_TTL_MS = 10 * 60 * 1000;
+/** Bounds in-memory result growth across long sessions of distinct searches. */
+const RESULT_CACHE_LIMIT = 50;
 
-const resultCache = new TtlCache<ProviderSearchResult>(RESULT_TTL_MS);
+const resultCache = new TtlCache<ProviderSearchResult>(RESULT_TTL_MS, RESULT_CACHE_LIMIT);
 const inflight = new InflightDeduper<ProviderSearchResult>();
 
 function requestKey(request: ProviderSearchRequest): string {

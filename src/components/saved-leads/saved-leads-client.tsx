@@ -25,6 +25,7 @@ export default function SavedLeadsClient() {
     isCompanySaved,
     toggleDemo,
     toggleCompany,
+    removeSaved,
   } = useSavedLeads();
 
   const companyRecords = records.filter((record) => record.kind === "osm");
@@ -35,6 +36,18 @@ export default function SavedLeadsClient() {
   const companies: Company[] = companyRecords.map((record) =>
     record.kind === "osm" ? record.company : (null as never),
   );
+  // References that no longer resolve (e.g. demo ids from an older dataset):
+  // surfaced explicitly instead of silently dropped from counts.
+  const displayedCount = companies.length + demoLeads.length;
+  const staleCount = records.length - displayedCount;
+
+  function handlePruneStale() {
+    for (const record of records) {
+      if (record.kind === "demo" && !getLeadById(record.demoId)) {
+        removeSaved(record.id);
+      }
+    }
+  }
 
   function handleExport() {
     const rows = savedRecordsToRows(records, getLeadById);
@@ -59,18 +72,30 @@ export default function SavedLeadsClient() {
               sections.
             </p>
           </div>
-          {records.length > 0 ? (
+          {displayedCount > 0 ? (
             <Button
               variant="secondary"
               onClick={handleExport}
               title="Download all saved leads (demo + OpenStreetMap) as CSV"
-              aria-label={`Export all ${records.length} saved leads as CSV`}
+              aria-label={`Export all ${displayedCount} saved leads as CSV`}
             >
               <Download className="h-4 w-4" aria-hidden="true" />
-              Export saved ({records.length})
+              Export saved ({displayedCount})
             </Button>
           ) : null}
         </div>
+        {staleCount > 0 ? (
+          <div className="mt-3 rounded-lg border border-status-warning-line bg-status-warning-bg p-3">
+            <p role="status" className="text-sm text-status-warning-fg">
+              {staleCount} saved reference{staleCount === 1 ? "" : "s"} no longer {staleCount === 1 ? "resolves" : "resolve"} to a known record and {staleCount === 1 ? "is" : "are"} hidden.
+            </p>
+            <div className="mt-2">
+              <Button variant="secondary" size="sm" onClick={handlePruneStale}>
+                Remove unresolvable {staleCount === 1 ? "reference" : "references"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {!storageAvailable ? (
           <p
             role="alert"
@@ -83,11 +108,15 @@ export default function SavedLeadsClient() {
         ) : null}
       </section>
 
-      {records.length === 0 ? (
+      {displayedCount === 0 ? (
         <EmptyState
           icon={<BookmarkX className="h-6 w-6" aria-hidden="true" />}
-          title="No saved leads yet"
-          description="Save promising companies from the Find Companies page — live OpenStreetMap results or demo records. Saved leads reappear here after a page refresh because they are stored locally. When you have saved leads, you can export them as CSV."
+          title={records.length === 0 ? "No saved leads yet" : "Saved leads can't be shown"}
+          description={
+            records.length === 0
+              ? "Save promising companies from the Find Companies page — live OpenStreetMap results or demo records. Saved leads reappear here after a page refresh because they are stored locally. When you have saved leads, you can export them as CSV."
+              : "Your saved references no longer resolve to known records (for example, after a dataset change). You can remove them with the button above."
+          }
           action={
             <Link href="/find-companies">
               <Button>Find Companies</Button>
