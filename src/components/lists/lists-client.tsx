@@ -247,35 +247,35 @@ function UserListRow({
       ) : (
         <>
           <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-ink">{list.name}</p>
-            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink3">
-              <span className="inline-flex items-center gap-1">
-                <Users className="h-3.5 w-3.5" aria-hidden="true" />
-                {list.leadIds.length} lead{list.leadIds.length === 1 ? "" : "s"}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-                Created {formatDate(list.createdAt)}
-              </span>
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button type="button" size="sm" variant="secondary" onClick={() => setEditing(true)} aria-label={`Rename ${list.name}`}>
-              <Pencil className="h-4 w-4" aria-hidden="true" />
-              Rename
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="danger"
-              onClick={() => setConfirmingDelete(true)}
-              aria-label={`Delete ${list.name}`}
+            <div>
+              <p className="text-sm font-semibold text-ink">{list.name}</p>
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink3">
+                <span className="inline-flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                  {list.leadIds.length} lead{list.leadIds.length === 1 ? "" : "s"}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+                  Created {formatDate(list.createdAt)}
+                </span>
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" size="sm" variant="secondary" onClick={() => setEditing(true)} aria-label={`Rename ${list.name}`}>
+                <Pencil className="h-4 w-4" aria-hidden="true" />
+                Rename
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="danger"
+                onClick={() => setConfirmingDelete(true)}
+                aria-label={`Delete ${list.name}`}
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
               Delete
             </Button>
-          </div>
+            </div>
           </div>
           <MemberList list={list} records={records} onAdd={onAdd} onRemove={onRemove} />
         </>

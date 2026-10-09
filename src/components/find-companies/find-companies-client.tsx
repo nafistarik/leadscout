@@ -72,7 +72,7 @@ function ModeToggle({ mode, onChange }: { mode: SearchMode; onChange: (mode: Sea
           >
             <Icon className="h-4 w-4" aria-hidden="true" />
             {option.label}
-            <span className={cn("hidden text-xs font-normal sm:inline", active ? "text-ink3" : "text-ink3")}>
+            <span className="hidden text-xs font-normal text-ink3 sm:inline">
               · {option.hint}
             </span>
           </button>
@@ -194,6 +194,17 @@ export function FindCompaniesClient() {
     setFilters((current) => ({ ...current, hasWebsite: false, hasPhone: false, sort: "provider" }));
   }
 
+  function handleModeChange(next: SearchMode) {
+    if (next === mode) return;
+    setMode(next);
+    // Reflect the toggle in the shareable URL so refresh and back-button
+    // restore the visible mode. Other params are preserved untouched.
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("mode", next);
+    router.replace(`/find-companies?${params.toString()}`, { scroll: false });
+    setWrittenKey(writtenUrlKey(params));
+  }
+
   function update<K extends keyof LeadSearchFilters>(key: K, value: LeadSearchFilters[K]) {
     setFilters((current) => ({ ...current, [key]: value }));
   }
@@ -253,7 +264,7 @@ export function FindCompaniesClient() {
           <h2 id="search-heading" className="text-xl font-bold tracking-tight text-ink">
             Find Companies
           </h2>
-          <ModeToggle mode={mode} onChange={setMode} />
+          <ModeToggle mode={mode} onChange={handleModeChange} />
         </div>
         {mode === "live" ? (
           <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink2">
@@ -270,10 +281,15 @@ export function FindCompaniesClient() {
         )}
       </section>
 
-      {mode === "live" ? (
+      {/*
+        Both sections stay mounted so toggling modes never discards the other
+        mode's form state, results, or in-flight search. `hidden` removes the
+        inactive section from layout and the accessibility tree.
+      */}
+      <div className={mode === "live" ? "" : "hidden"}>
         <LiveSearchSection onApplyPreset={applyPreset} />
-      ) : (
-        <div className="space-y-6">
+      </div>
+      <div className={mode === "demo" ? "space-y-6" : "hidden"}>
           <Card>
             <CardBody>
               <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -501,7 +517,6 @@ export function FindCompaniesClient() {
             )}
           </section>
         </div>
-      )}
 
       {mode === "live" ? (
         <div className="rounded-xl border border-line-soft bg-raised p-4">
