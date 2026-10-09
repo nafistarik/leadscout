@@ -16,9 +16,9 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Something went wrong</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm text-zinc-600 dark:text-zinc-400">
+    <div className="neu-raised rounded-xl p-8 text-center">
+      <h2 className="text-lg font-semibold text-ink">Something went wrong</h2>
+      <p className="mx-auto mt-2 max-w-md text-sm text-ink2">
         This section failed to load. Your locally saved leads and lists are still stored in the
         browser.
       </p>

@@ -2,20 +2,238 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+/* ------------------------------------------------------------------
+ * LeadScout Neumorphic Design System
+ *
+ * Single source of truth for surfaces, text, accent, status, elevation,
+ * radii, and motion. Components consume these semantic tokens — no local
+ * hex colors or hardcoded shadows elsewhere.
+ *
+ * Lighting: soft daylight from the top-left. Raised surfaces pair a cool
+ * contact shadow (bottom-right) with a highlight (top-left); recessed
+ * surfaces invert that pairing. Flat surfaces carry hierarchy through
+ * borders and whitespace instead of shadows.
+ * ------------------------------------------------------------------ */
+
+:root {
+  /* Surfaces — cool light blue-gray matte material */
+  --surface-app: #edf2f8;
+  --surface-alt: #e7eef7;
+  --surface-raised: #eef3f9;
+  --surface-recessed: #e2e9f3;
+  --surface-overlay: #f4f8fc;
+
+  /* Text — muted deepened to hold AA on light surfaces */
+  --text-primary: #17263b;
+  --text-secondary: #596a80;
+  --text-muted: #5a6c82;
+
+  /* Accent — restrained blue; ink variant deepened for AA text contrast */
+  --accent: #3478c8;
+  --accent-hover: #2f6cb4;
+  --accent-pressed: #2a5f9e;
+  --accent-ink: #2f6bb3;
+  --accent-soft: #dbe7f7;
+  --on-accent: #ffffff;
+
+  /* Borders and separators */
+  --line: #d8e1ec;
+  --line-soft: #e2e9f2;
+
+  /* Status (soft fills + AA text tones on light surfaces) */
+  --status-success-bg: #ddf0e4;
+  --status-success-fg: #20603a;
+  --status-success-line: #bfe0cc;
+  --status-warning-bg: #f9ecd4;
+  --status-warning-fg: #7a5410;
+  --status-warning-line: #ecd9ac;
+  --status-error-bg: #f9dede;
+  --status-error-fg: #96272b;
+  --status-error-line: #efc3c4;
+  --status-info-bg: #dbe7f7;
+  --status-info-fg: #2f6bb3;
+  --status-info-line: #c2d6ef;
+  --status-demo-bg: #e6e2f7;
+  --status-demo-fg: #54449b;
+  --status-demo-line: #d2cbee;
+
+  /* Neumorphic light/shadow pair (top-left light) */
+  --neu-dark: rgba(163, 177, 198, 0.55);
+  --neu-dark-soft: rgba(163, 177, 198, 0.35);
+  --neu-light: rgba(255, 255, 255, 0.95);
+  --neu-hi: rgba(255, 255, 255, 0.8);
+
+  --shadow-raised: inset 0 1px 0 var(--neu-hi), 6px 6px 16px var(--neu-dark-soft),
+    -4px -4px 12px var(--neu-light);
+  --shadow-raised-sm: inset 0 1px 0 var(--neu-hi), 3px 3px 8px var(--neu-dark-soft),
+    -2px -2px 6px var(--neu-light);
+  --shadow-inset: inset 2px 2px 6px var(--neu-dark-soft), inset -2px -2px 6px var(--neu-light);
+  --shadow-float: inset 0 1px 0 var(--neu-hi), 10px 10px 28px var(--neu-dark),
+    -6px -6px 18px var(--neu-light);
+
+  /* Focus */
+  --focus-ring: #2f6bb3;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+}
+
+html.dark {
+  color-scheme: dark;
+
+  /* Deep blue-charcoal foundation; depth via tonal separation + borders */
+  --surface-app: #161d29;
+  --surface-alt: #182130;
+  --surface-raised: #1c2635;
+  --surface-recessed: #141b27;
+  --surface-overlay: #223046;
+
+  --text-primary: #e6edf7;
+  --text-secondary: #a5b3c6;
+  --text-muted: #8a98ac;
+
+  --accent: #78a9f5;
+  --accent-hover: #8ab5f7;
+  --accent-pressed: #679cec;
+  --accent-ink: #9dc0f8;
+  --accent-soft: #22365a;
+  --on-accent: #0f1a2c;
+
+  --line: #2a3a52;
+  --line-soft: #223046;
+
+  --status-success-bg: #14342a;
+  --status-success-fg: #8fd6ab;
+  --status-success-line: #245c46;
+  --status-warning-bg: #3a2d12;
+  --status-warning-fg: #e8c476;
+  --status-warning-line: #5f4b22;
+  --status-error-bg: #3d1d20;
+  --status-error-fg: #f0939a;
+  --status-error-line: #633338;
+  --status-info-bg: #22365a;
+  --status-info-fg: #9dc0f8;
+  --status-info-line: #35507e;
+  --status-demo-bg: #2c2752;
+  --status-demo-fg: #bfb6f0;
+  --status-demo-line: #46408a;
+
+  --neu-dark: rgba(0, 0, 0, 0.55);
+  --neu-dark-soft: rgba(0, 0, 0, 0.35);
+  --neu-light: rgba(148, 178, 255, 0.07);
+  --neu-hi: rgba(255, 255, 255, 0.06);
+
+  --shadow-raised: inset 0 1px 0 var(--neu-hi), 6px 6px 16px var(--neu-dark-soft),
+    -4px -4px 12px var(--neu-light);
+  --shadow-raised-sm: inset 0 1px 0 var(--neu-hi), 3px 3px 8px var(--neu-dark-soft),
+    -2px -2px 6px var(--neu-light);
+  --shadow-inset: inset 2px 2px 6px var(--neu-dark-soft), inset -2px -2px 6px var(--neu-light);
+  --shadow-float: inset 0 1px 0 var(--neu-hi), 10px 10px 28px var(--neu-dark),
+    -6px -6px 18px var(--neu-light);
+
+  --focus-ring: #78a9f5;
+}
+
+/* Expose semantic tokens as Tailwind utilities (bg-app, text-ink, …) */
+@theme inline {
+  --color-app: var(--surface-app);
+  --color-alt: var(--surface-alt);
+  --color-raised: var(--surface-raised);
+  --color-recessed: var(--surface-recessed);
+  --color-overlay: var(--surface-overlay);
+  --color-ink: var(--text-primary);
+  --color-ink2: var(--text-secondary);
+  --color-ink3: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-pressed: var(--accent-pressed);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-fg: var(--status-success-fg);
+  --color-status-success-line: var(--status-success-line);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-fg: var(--status-warning-fg);
+  --color-status-warning-line: var(--status-warning-line);
+  --color-status-error-bg: var(--status-error-bg);
+  --color-status-error-fg: var(--status-error-fg);
+  --color-status-error-line: var(--status-error-line);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-status-info-fg: var(--status-info-fg);
+  --color-status-info-line: var(--status-info-line);
+  --color-status-demo-bg: var(--status-demo-bg);
+  --color-status-demo-fg: var(--status-demo-fg);
+  --color-status-demo-line: var(--status-demo-line);
 }
 
 html {
   color-scheme: light;
 }
 
-html.dark {
-  color-scheme: dark;
-}
-
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  background-color: var(--surface-app);
+  color: var(--text-primary);
+}
+
+/* Consistent, always-visible keyboard focus (single mechanism app-wide) */
+:where(a, button, input, select, summary, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------------- Elevation utilities (token-driven) ---------------- */
+
+/* Elevation utilities set shadow only and compose with background token
+ * utilities (bg-raised, bg-recessed, bg-accent, …), so hover:/dark:/
+ * disabled: variants keep working. Always pair neu-* with a bg-* class. */
+
+/* Raised: primary cards, metric surfaces, dialogs, floating controls */
+.neu-raised {
+  box-shadow: var(--shadow-raised);
+}
+
+/* Raised-sm: buttons with tactile affordance, active nav, small floats */
+.neu-raised-sm {
+  box-shadow: var(--shadow-raised-sm);
+}
+
+/* Recessed: inputs, filter controls, segmented tracks, pressed state */
+.neu-recessed {
+  box-shadow: var(--shadow-inset);
+}
+
+/* Pressed feedback for tactile buttons */
+.neu-pressable {
+  transition:
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+.neu-pressable:active {
+  box-shadow: var(--shadow-inset);
+  transform: translateY(1px);
+}
+
+/* Disabled controls lose tactile depth; opacity (component-level) carries state */
+.neu-pressable:disabled {
+  box-shadow: none;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

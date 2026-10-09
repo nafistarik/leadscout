@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { FlaskConical, Moon, Sun, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { STORAGE_KEYS, readLocalStorage } from "@/lib/storage";
+import { sanitizeRecords } from "@/lib/saved-leads";
 import { useTheme } from "@/hooks/use-theme";
 import type { ThemeMode } from "@/hooks/use-theme";
 
@@ -28,24 +30,24 @@ function ThemeOption({
       type="button"
       onClick={() => onSelect(value)}
       aria-pressed={active}
-      className={`flex flex-1 items-start gap-3 rounded-lg border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
+      className={`neu-pressable flex flex-1 items-start gap-3 rounded-lg border p-4 text-left ${
         active
-          ? "border-blue-600 bg-blue-50/60 dark:border-blue-400 dark:bg-blue-950/40"
-          : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-600"
+          ? "neu-recessed border-accent bg-recessed"
+          : "border-line-soft bg-raised hover:bg-alt"
       }`}
     >
       <span
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
           active
-            ? "bg-blue-600 text-white dark:bg-blue-400 dark:text-zinc-950"
-            : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+            ? "bg-accent text-on-accent"
+            : "neu-recessed bg-recessed text-ink2"
         }`}
       >
         {icon}
       </span>
       <span>
-        <span className="block text-sm font-semibold text-zinc-900 dark:text-zinc-50">{label}</span>
-        <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">{description}</span>
+        <span className="block text-sm font-semibold text-ink">{label}</span>
+        <span className="mt-0.5 block text-xs text-ink3">{description}</span>
       </span>
     </button>
   );
@@ -59,8 +61,9 @@ export default function SettingsClient() {
   function handleReset() {
     try {
       window.localStorage.removeItem(STORAGE_KEYS.savedLeads);
+      window.localStorage.removeItem(STORAGE_KEYS.savedLeadsV2);
       window.localStorage.removeItem(STORAGE_KEYS.lists);
-      setResetMessage("Local demo data cleared. Saved leads and your lists were removed from this browser.");
+      setResetMessage("Local data cleared. Saved leads and your lists were removed from this browser.");
     } catch {
       setResetMessage("Could not access browser storage in this session. Nothing was changed.");
     }
@@ -69,6 +72,17 @@ export default function SettingsClient() {
 
   const savedCount = (() => {
     try {
+      // Prefer the v2 envelope; fall back to the legacy Part 1 id list.
+      const v2 = sanitizeRecords(
+        (() => {
+          try {
+            return JSON.parse(readLocalStorage(STORAGE_KEYS.savedLeadsV2) ?? "null");
+          } catch {
+            return [];
+          }
+        })(),
+      );
+      if (v2.length > 0 || readLocalStorage(STORAGE_KEYS.savedLeadsV2) !== null) return v2.length;
       const raw = readLocalStorage(STORAGE_KEYS.savedLeads);
       const parsed: unknown = raw ? JSON.parse(raw) : [];
       return Array.isArray(parsed) ? parsed.length : 0;
@@ -90,19 +104,19 @@ export default function SettingsClient() {
   return (
     <div className="space-y-6">
       <section aria-labelledby="settings-heading">
-        <h2 id="settings-heading" className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <h2 id="settings-heading" className="text-xl font-bold tracking-tight text-ink">
           Settings
         </h2>
-        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-          Prototype preferences for the Part 1 demo. No account, API keys, or environment
-          variables are required.
+        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink2">
+          Search live business data, manage saved leads locally, and customize the theme. No
+          account, API keys, or environment variables are required.
         </p>
       </section>
 
       <section aria-labelledby="appearance-heading">
         <Card>
           <CardHeader>
-            <h3 id="appearance-heading" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            <h3 id="appearance-heading" className="text-sm font-semibold text-ink">
               Appearance
             </h3>
           </CardHeader>
@@ -133,18 +147,23 @@ export default function SettingsClient() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <FlaskConical className="h-4 w-4 text-violet-600 dark:text-violet-300" aria-hidden="true" />
-              <h3 id="demo-mode-heading" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+              <FlaskConical className="h-4 w-4 text-status-demo-fg" aria-hidden="true" />
+              <h3 id="demo-mode-heading" className="text-sm font-semibold text-ink">
                 Demo-data mode
               </h3>
             </div>
           </CardHeader>
-          <CardBody className="space-y-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+          <CardBody className="space-y-3 text-sm leading-relaxed text-ink2">
             <p>
-              LeadScout is running in <strong className="font-semibold text-zinc-900 dark:text-zinc-100">local demo mode</strong>.
-              All companies, metrics, and activity events are fictional sample records. Availability
-              flags (“Website listed”, “Not available”) are illustrative only — no contact details
-              are shown and nothing is verified.
+              <strong className="font-semibold text-ink">Sample dataset:</strong>{" "}
+              a built-in set of 12 fictional companies. Availability flags (“Website listed”,
+              “Not available”) are illustrative only — no contact details are shown and nothing
+              is verified. Sample content is always badged as demo data.
+            </p>
+            <p>
+              <strong className="font-semibold text-ink">Live search:</strong>{" "}
+              real businesses resolved from OpenStreetMap data. Only details the source provides
+              (website, phone, email, opening hours) are shown; missing fields stay blank.
             </p>
             <p>
               Saved leads and lists persist in this browser via local storage only. They do not sync
@@ -157,21 +176,31 @@ export default function SettingsClient() {
       <section aria-labelledby="sources-heading">
         <Card>
           <CardHeader>
-            <h3 id="sources-heading" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            <h3 id="sources-heading" className="text-sm font-semibold text-ink">
               Data sources
             </h3>
           </CardHeader>
-          <CardBody className="space-y-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+          <CardBody className="space-y-3 text-sm leading-relaxed text-ink2">
             <p>
-              <strong className="font-semibold text-zinc-900 dark:text-zinc-100">Current (Part 1):</strong>{" "}
-              a built-in 12-record sample dataset. No network requests to business-data services are
-              made.
+              <strong className="font-semibold text-ink">Live discovery:</strong>{" "}
+              OpenStreetMap data via the public Overpass API (bounded geographic queries) and
+              Nominatim for place lookup. Results are cached briefly in memory, and identical
+              simultaneous searches share one request to respect rate limits. Coverage depends on
+              community mapping and is never exhaustive. ©{" "}
+              <Link
+                href="https://www.openstreetmap.org/copyright"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-accent-ink underline-offset-2 hover:underline"
+              >
+                OpenStreetMap
+              </Link>{" "}
+              contributors.
             </p>
             <p>
-              <strong className="font-semibold text-zinc-900 dark:text-zinc-100">Planned (Part 2):</strong>{" "}
-              free public sources such as OpenStreetMap and the Overpass API for real company
-              discovery, plus search, filtering, deduplication, lead scoring where supportable, and
-              CSV export. The current search form is shaped so it can connect without a UI rewrite.
+              <strong className="font-semibold text-ink">Samples:</strong>{" "}
+              the built-in 12-record fictional dataset used by demo mode. No network requests are
+              made for sample content.
             </p>
           </CardBody>
         </Card>
@@ -180,27 +209,27 @@ export default function SettingsClient() {
       <section aria-labelledby="reset-heading">
         <Card>
           <CardHeader>
-            <h3 id="reset-heading" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            <h3 id="reset-heading" className="text-sm font-semibold text-ink">
               Local data
             </h3>
           </CardHeader>
           <CardBody>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400" suppressHydrationWarning>
+            <p className="text-sm text-ink2" suppressHydrationWarning>
               Currently stored in this browser: {savedCount} saved lead{savedCount === 1 ? "" : "s"},{" "}
               {listCount} local list{listCount === 1 ? "" : "s"}. Your theme preference is kept
               separately and is not affected.
             </p>
             {resetMessage ? (
-              <p role="status" className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300">
+              <p role="status" className="neu-recessed mt-3 rounded-lg bg-recessed p-3 text-sm text-ink2">
                 {resetMessage}
               </p>
             ) : null}
             {confirmingReset ? (
-              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/40">
-                <p className="text-sm font-medium text-red-800 dark:text-red-200">
+              <div className="mt-4 rounded-lg border border-status-error-line bg-status-error-bg p-4">
+                <p className="text-sm font-medium text-status-error-fg">
                   Clear all saved leads and lists from this browser?
                 </p>
-                <p className="mt-1 text-[13px] text-red-700 dark:text-red-300">
+                <p className="mt-1 text-[13px] text-status-error-fg opacity-90">
                   This cannot be undone. The sample dataset itself is built in and will remain.
                 </p>
                 <div className="mt-3 flex gap-2">

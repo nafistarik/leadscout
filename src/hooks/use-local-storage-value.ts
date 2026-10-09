@@ -21,7 +21,7 @@ function readCached<T>(key: string, fallback: T, sanitize: (value: unknown) => T
   return value;
 }
 
-function subscribe(callback: () => void): () => void {
+export function subscribeToStorage(callback: () => void): () => void {
   if (typeof window === "undefined") return () => undefined;
   const notify = (): void => callback();
   window.addEventListener("storage", notify);
@@ -38,6 +38,9 @@ function notify(): void {
   }
 }
 
+/** Shared storage-event channel so bespoke external stores stay in sync. */
+export { notify as notifyStorageChanged };
+
 /**
  * SSR-safe localStorage-backed state.
  *
@@ -53,7 +56,7 @@ export function useLocalStorageValue<T>(
   sanitize: (value: unknown) => T,
 ): readonly [T, (next: T) => void] {
   const value = useSyncExternalStore(
-    subscribe,
+    subscribeToStorage,
     () => readCached(key, fallback, sanitize),
     () => fallback,
   );

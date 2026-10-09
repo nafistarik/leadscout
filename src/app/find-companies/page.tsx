@@ -4,12 +4,12 @@ import { FindCompaniesClient } from "@/components/find-companies/find-companies-
 
 export const metadata: Metadata = {
   title: "Find Companies",
-  description: "Filter the local demo company dataset. Live public-data search arrives in Part 2.",
+  description: "Discover real businesses via OpenStreetMap, or browse the local demo dataset.",
 };
 
 export default function FindCompaniesPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-zinc-500">Loading search…</p>}>
+    <Suspense fallback={<p className="text-sm text-ink3">Loading search…</p>}>
       <FindCompaniesClient />
     </Suspense>
   );

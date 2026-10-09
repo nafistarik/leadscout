@@ -4,9 +4,14 @@ export function cn(...classes: Array<string | false | null | undefined>): string
 
 /** Storage keys used by the prototype. Centralized so Part 2 can migrate them. */
 export const STORAGE_KEYS = {
+  /** Part 1: array of demo ids (string[]). Kept for migration; v2 is canonical. */
   savedLeads: "leadscout.savedLeadIds.v1",
+  /** Part 2: versioned envelope of saved-lead records (demo + real). */
+  savedLeadsV2: "leadscout.savedLeads.v2",
   lists: "leadscout.lists.v1",
   theme: "leadscout.theme.v1",
+  /** Nominatim geocode cache (query key -> area + timestamp). */
+  geocodeCache: "leadscout.geocodeCache.v1",
 } as const;
 
 export function readLocalStorage(key: string): string | null {

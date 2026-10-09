@@ -1,7 +1,17 @@
 import { useCallback } from "react";
 import { STORAGE_KEYS } from "@/lib/storage";
 import { useLocalStorageValue } from "@/hooks/use-local-storage-value";
+import {
+  applyAddToList,
+  applyCreateList,
+  applyDeleteList,
+  applyRemoveFromList,
+  applyRenameList,
+} from "@/lib/lead-lists";
+import type { ListActionResult } from "@/lib/lead-lists";
 import type { LeadList } from "@/types/lead";
+
+export type { ListActionResult };
 
 function sanitizeLists(value: unknown): LeadList[] {
   if (!Array.isArray(value)) return [];
@@ -29,14 +39,14 @@ function createId(): string {
   return `list-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 }
 
-export interface ListActionResult {
-  ok: boolean;
-  error?: string;
+function failed(result: { lists: LeadList[] } | ListActionResult): result is ListActionResult {
+  return (result as ListActionResult).ok === false;
 }
 
 /**
  * Local-only lead lists, persisted to localStorage.
  * SSR-safe via useSyncExternalStore (see useLocalStorageValue).
+ * Membership rules live in pure helpers (see lib/lead-lists.ts).
  */
 export function useLeadLists() {
   const [lists, setLists] = useLocalStorageValue<LeadList[]>(
@@ -47,17 +57,13 @@ export function useLeadLists() {
 
   const createList = useCallback(
     (name: string): ListActionResult => {
-      const trimmed = name.trim();
-      if (!trimmed) return { ok: false, error: "List name cannot be empty." };
-      const duplicate = lists.some((list) => list.name.toLowerCase() === trimmed.toLowerCase());
-      if (duplicate) return { ok: false, error: "A list with this name already exists." };
-      const next: LeadList = {
-        id: createId(),
-        name: trimmed,
-        createdAt: new Date().toISOString(),
-        leadIds: [],
-      };
-      setLists([...lists, next]);
+      const result = applyCreateList(
+        lists,
+        name,
+        { id: createId(), name, createdAt: new Date().toISOString(), leadIds: [] },
+      );
+      if (failed(result)) return result;
+      setLists(result.lists);
       return { ok: true };
     },
     [lists, setLists],
@@ -65,13 +71,9 @@ export function useLeadLists() {
 
   const renameList = useCallback(
     (id: string, name: string): ListActionResult => {
-      const trimmed = name.trim();
-      if (!trimmed) return { ok: false, error: "List name cannot be empty." };
-      const duplicate = lists.some(
-        (list) => list.id !== id && list.name.toLowerCase() === trimmed.toLowerCase(),
-      );
-      if (duplicate) return { ok: false, error: "A list with this name already exists." };
-      setLists(lists.map((list) => (list.id === id ? { ...list, name: trimmed } : list)));
+      const result = applyRenameList(lists, id, name);
+      if (failed(result)) return result;
+      setLists(result.lists);
       return { ok: true };
     },
     [lists, setLists],
@@ -79,10 +81,32 @@ export function useLeadLists() {
 
   const deleteList = useCallback(
     (id: string) => {
-      setLists(lists.filter((list) => list.id !== id));
+      setLists(applyDeleteList(lists, id));
     },
     [lists, setLists],
   );
 
-  return { lists, createList, renameList, deleteList };
+  const addToList = useCallback(
+    (listId: string, leadId: string): ListActionResult => {
+      const result = applyAddToList(lists, listId, leadId);
+      if (failed(result)) return result;
+      setLists(result.lists);
+      return { ok: true };
+    },
+    [lists, setLists],
+  );
+
+  const removeFromList = useCallback(
+    (listId: string, leadId: string) => {
+      setLists(applyRemoveFromList(lists, listId, leadId));
+    },
+    [lists, setLists],
+  );
+
+  const listsContaining = useCallback(
+    (leadId: string): LeadList[] => lists.filter((list) => list.leadIds.includes(leadId)),
+    [lists],
+  );
+
+  return { lists, createList, renameList, deleteList, addToList, removeFromList, listsContaining };
 }

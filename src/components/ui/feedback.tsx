@@ -16,12 +16,12 @@ export function EmptyState({
     <Card>
       <CardBody className="flex flex-col items-center px-6 py-12 text-center">
         {icon ? (
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+          <div className="neu-recessed mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-recessed text-ink2">
             {icon}
           </div>
         ) : null}
-        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{title}</h3>
-        <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{description}</p>
+        <h3 className="text-base font-semibold text-ink">{title}</h3>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-ink2">{description}</p>
         {action ? <div className="mt-6">{action}</div> : null}
       </CardBody>
     </Card>
@@ -40,9 +40,9 @@ export function SectionHeading({
   return (
     <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{title}</h2>
+        <h2 className="text-base font-semibold tracking-tight text-ink">{title}</h2>
         {description ? (
-          <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">{description}</p>
+          <p className="mt-1 max-w-2xl text-sm text-ink2">{description}</p>
         ) : null}
       </div>
       {action}

@@ -26,13 +26,13 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <Link
         href="/"
         onClick={onNavigate}
-        className="flex items-center gap-2.5 rounded-lg px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+        className="flex items-center gap-2.5 rounded-lg px-2 py-2"
         aria-label="LeadScout home"
       >
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white dark:bg-blue-500 dark:text-zinc-950">
+        <span className="neu-raised-sm flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-on-accent">
           <Telescope className="h-5 w-5" aria-hidden="true" />
         </span>
-        <span className="text-[17px] font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <span className="text-[17px] font-bold tracking-tight text-ink">
           LeadScout
         </span>
       </Link>
@@ -49,13 +49,18 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600",
+                    "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                     active
-                      ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200"
-                      : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100",
+                      ? "neu-recessed bg-recessed font-semibold text-accent-ink"
+                      : "font-medium text-ink2 hover:bg-recessed hover:text-ink",
                   )}
                 >
+                  {active ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r bg-accent"
+                    />
+                  ) : null}
                   <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                   {item.label}
                 </Link>
@@ -65,9 +70,9 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </ul>
       </nav>
 
-      <div className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-400">
-        <p className="font-semibold text-zinc-700 dark:text-zinc-200">Local demo mode</p>
-        <p className="mt-1">Sample records only. Live public-source search arrives in Part 2.</p>
+      <div className="mt-6 rounded-lg border border-line-soft bg-raised p-3 text-xs leading-relaxed text-ink2">
+        <p className="font-semibold text-ink">Local-first app</p>
+        <p className="mt-1">Live OpenStreetMap search + labeled samples. Saves stay in this browser.</p>
       </div>
     </div>
   );

@@ -1,43 +1,150 @@
-import { useCallback, useState } from "react";
-import { DEMO_LEADS } from "@/data/demo-leads";
-import { STORAGE_KEYS } from "@/lib/storage";
-import { probeStorage, useLocalStorageValue } from "@/hooks/use-local-storage-value";
-
-function sanitizeIds(ids: unknown): string[] {
-  if (!Array.isArray(ids)) return [];
-  const valid = new Set(DEMO_LEADS.map((lead) => lead.id));
-  return ids.filter((id): id is string => typeof id === "string" && valid.has(id));
-}
+import { useCallback, useState, useSyncExternalStore } from "react";
+import type { Company, SavedLeadRecord } from "@/types/company";
+import { toDemoRecordId } from "@/types/company";
+import { STORAGE_KEYS, readLocalStorage, safeJsonParse, writeLocalStorage } from "@/lib/storage";
+import {
+  migrateLegacySavedLeads,
+  sanitizeRecords,
+  serializeRecords,
+} from "@/lib/saved-leads";
+import {
+  notifyStorageChanged,
+  probeStorage,
+  subscribeToStorage,
+} from "@/hooks/use-local-storage-value";
 
 /**
- * Saved-lead state persisted to localStorage.
- * SSR-safe: backed by useSyncExternalStore, so the server snapshot (empty)
- * hydrates cleanly and the client value syncs immediately after.
+ * Saved-lead state (demo references + real company snapshots) persisted to
+ * localStorage under a versioned envelope.
+ *
+ * - SSR-safe via useSyncExternalStore (server snapshot: empty).
+ * - Part 1 demo-id arrays migrate to v2 records exactly once per session;
+ *   existing user data is preserved.
+ * - Malformed stored records are dropped by validation, never crash pages.
+ * - Cross-tab sync is preserved through the shared storage-event channel.
  */
+
+interface RecordCache {
+  raw: string | null;
+  value: SavedLeadRecord[];
+}
+
+const cache: RecordCache = { raw: undefined as unknown as string | null, value: [] };
+let cacheReady = false;
+let migrationAttempted = false;
+
+function readRecords(): SavedLeadRecord[] {
+  const raw = readLocalStorage(STORAGE_KEYS.savedLeadsV2);
+  if (raw !== null) {
+    if (cacheReady && cache.raw === raw) return cache.value;
+    const value = sanitizeRecords(safeJsonParse<unknown>(raw, []));
+    cache.raw = raw;
+    cache.value = value;
+    cacheReady = true;
+    return value;
+  }
+  if (!migrationAttempted) {
+    migrationAttempted = true;
+    const migrated = migrateLegacySavedLeads(new Date().toISOString());
+    cache.raw = readLocalStorage(STORAGE_KEYS.savedLeadsV2);
+    cache.value = migrated;
+    cacheReady = true;
+    return migrated;
+  }
+  if (cacheReady) return cache.value;
+  cache.raw = null;
+  cache.value = [];
+  cacheReady = true;
+  return [];
+}
+
+function writeRecords(next: SavedLeadRecord[]): void {
+  const serialized = serializeRecords(next);
+  const ok = writeLocalStorage(STORAGE_KEYS.savedLeadsV2, serialized);
+  cache.raw = ok ? serialized : readLocalStorage(STORAGE_KEYS.savedLeadsV2);
+  cache.value = next;
+  cacheReady = true;
+  notifyStorageChanged();
+}
+
 export function useSavedLeads() {
-  const [savedIds, setSavedIds] = useLocalStorageValue<string[]>(
-    STORAGE_KEYS.savedLeads,
-    [],
-    sanitizeIds,
-  );
+  const records = useSyncExternalStore(subscribeToStorage, readRecords, () => []);
   const [storageAvailable] = useState(probeStorage);
 
-  const isSaved = useCallback((id: string) => savedIds.includes(id), [savedIds]);
+  const setRecords = useCallback((next: SavedLeadRecord[]) => {
+    writeRecords(next);
+  }, []);
 
-  const toggleSaved = useCallback(
-    (id: string) => {
-      const next = isSaved(id) ? savedIds.filter((saved) => saved !== id) : [...savedIds, id];
-      setSavedIds(next);
+  const savedIds = records.map((record) => record.id);
+
+  const isSaved = useCallback(
+    (recordId: string) => records.some((record) => record.id === recordId),
+    [records],
+  );
+
+  const isDemoSaved = useCallback(
+    (demoId: string) => isSaved(toDemoRecordId(demoId)),
+    [isSaved],
+  );
+
+  const isCompanySaved = useCallback((companyId: string) => isSaved(companyId), [isSaved]);
+
+  const toggleDemo = useCallback(
+    (demoId: string) => {
+      const id = toDemoRecordId(demoId);
+      if (isSaved(id)) {
+        setRecords(records.filter((record) => record.id !== id));
+      } else {
+        setRecords([
+          ...records,
+          { id, kind: "demo", savedAt: new Date().toISOString(), demoId },
+        ]);
+      }
     },
-    [isSaved, savedIds, setSavedIds],
+    [isSaved, records, setRecords],
+  );
+
+  const toggleCompany = useCallback(
+    (company: Company) => {
+      if (isSaved(company.id)) {
+        setRecords(records.filter((record) => record.id !== company.id));
+      } else {
+        // Dedupe by provider id: never store the same record twice.
+        const withoutDupes = records.filter((record) => record.id !== company.id);
+        setRecords([
+          ...withoutDupes,
+          { id: company.id, kind: "osm", savedAt: new Date().toISOString(), company },
+        ]);
+      }
+    },
+    [isSaved, records, setRecords],
   );
 
   const removeSaved = useCallback(
-    (id: string) => {
-      setSavedIds(savedIds.filter((saved) => saved !== id));
+    (recordId: string) => {
+      setRecords(records.filter((record) => record.id !== recordId));
     },
-    [savedIds, setSavedIds],
+    [records, setRecords],
   );
 
-  return { savedIds, storageAvailable, isSaved, toggleSaved, removeSaved };
+  const getCompany = useCallback(
+    (companyId: string): Company | undefined => {
+      const record = records.find((item) => item.id === companyId);
+      return record?.kind === "osm" ? record.company : undefined;
+    },
+    [records],
+  );
+
+  return {
+    records,
+    savedIds,
+    storageAvailable,
+    isSaved,
+    isDemoSaved,
+    isCompanySaved,
+    toggleDemo,
+    toggleCompany,
+    removeSaved,
+    getCompany,
+  };
 }
