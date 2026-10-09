@@ -5,9 +5,10 @@ import Link from "next/link";
 import { FlaskConical, Moon, Sun, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { STORAGE_KEYS, readLocalStorage } from "@/lib/storage";
-import { sanitizeRecords } from "@/lib/saved-leads";
+import { STORAGE_KEYS } from "@/lib/storage";
 import { notifyStorageChanged } from "@/hooks/use-local-storage-value";
+import { useLeadLists } from "@/hooks/use-lead-lists";
+import { useSavedLeads } from "@/hooks/use-saved-leads";
 import { useTheme } from "@/hooks/use-theme";
 import type { ThemeMode } from "@/hooks/use-theme";
 
@@ -78,36 +79,13 @@ export default function SettingsClient() {
     setConfirmingReset(false);
   }
 
-  const savedCount = (() => {
-    try {
-      // Prefer the v2 envelope; fall back to the legacy Part 1 id list.
-      const v2 = sanitizeRecords(
-        (() => {
-          try {
-            return JSON.parse(readLocalStorage(STORAGE_KEYS.savedLeadsV2) ?? "null");
-          } catch {
-            return [];
-          }
-        })(),
-      );
-      if (v2.length > 0 || readLocalStorage(STORAGE_KEYS.savedLeadsV2) !== null) return v2.length;
-      const raw = readLocalStorage(STORAGE_KEYS.savedLeads);
-      const parsed: unknown = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed.length : 0;
-    } catch {
-      return 0;
-    }
-  })();
-
-  const listCount = (() => {
-    try {
-      const raw = readLocalStorage(STORAGE_KEYS.lists);
-      const parsed: unknown = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed.length : 0;
-    } catch {
-      return 0;
-    }
-  })();
+  // Counts derive from the SSR-safe storage hooks (server snapshot first,
+  // real values after hydration) instead of reading localStorage during
+  // render, which would hydrate-mismatch for any user with saved data.
+  const { records: savedRecords } = useSavedLeads();
+  const { lists } = useLeadLists();
+  const savedCount = savedRecords.length;
+  const listCount = lists.length;
 
   return (
     <div className="space-y-6">
@@ -222,7 +200,7 @@ export default function SettingsClient() {
             </h3>
           </CardHeader>
           <CardBody>
-            <p className="text-sm text-ink2" suppressHydrationWarning>
+            <p className="text-sm text-ink2">
               Currently stored in this browser: {savedCount} saved lead{savedCount === 1 ? "" : "s"},{" "}
               {listCount} local list{listCount === 1 ? "" : "s"}. Your theme preference is kept
               separately and is not affected.

@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { readLocalStorage, safeJsonParse, writeLocalStorage } from "@/lib/storage";
 
 const NOTIFY_EVENT = "leadscout:storage";
@@ -55,10 +55,15 @@ export function useLocalStorageValue<T>(
   fallback: T,
   sanitize: (value: unknown) => T,
 ): readonly [T, (next: T) => void] {
+  // Pin the first-render fallback so getServerSnapshot is referentially
+  // stable. Fresh inline literals (e.g. `[]`) would otherwise make React warn
+  // about uncached snapshots on every mount. Hydration still reconciles
+  // against real storage through getSnapshot exactly once.
+  const [serverSnapshot] = useState(() => fallback);
   const value = useSyncExternalStore(
     subscribeToStorage,
     () => readCached(key, fallback, sanitize),
-    () => fallback,
+    () => serverSnapshot,
   );
 
   const setValue = useCallback(

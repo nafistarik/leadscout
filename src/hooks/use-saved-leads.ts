@@ -99,8 +99,11 @@ export function resetSavedLeadStoreForTests(): void {
   migrationAttempted = false;
 }
 
+/** Frozen empty snapshot: referentially stable for getServerSnapshot. */
+const EMPTY_RECORDS: readonly SavedLeadRecord[] = Object.freeze([]);
+
 export function useSavedLeads() {
-  const records = useSyncExternalStore(subscribeToStorage, readRecords, () => []);
+  const records = useSyncExternalStore(subscribeToStorage, readRecords, () => EMPTY_RECORDS as SavedLeadRecord[]);
   const [storageAvailable] = useState(probeStorage);
 
   const setRecords = useCallback((next: SavedLeadRecord[]) => {

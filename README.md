@@ -85,10 +85,11 @@ CSV (UTF-8 with BOM, RFC 4180 quoting, formula-injection guard, temporary downlo
 
 ## Known limitations
 
-- Live Overpass requests have **not been verified from every network** (sandboxed CI environments block `overpass-api.de`); Nominatim resolution is verified. Live search depends on public-service availability and community mapping coverage, which varies widely by area.
-- No automated browser (E2E) tests exist — interaction behavior is covered by unit/integration tests plus manual checks.
+- Live Overpass requests have **not been verified from every network** (sandboxed CI environments block `overpass-api.de`); Nominatim resolution is verified. Live search depends on public-service availability and community mapping coverage, which varies widely by area. One full live search (Berlin bakeries → 10 deduplicated results with scores, attribution, save, and snapshot persistence) was verified in-browser when the sandbox path was reachable.
+- No automated browser (E2E) tests are committed — interaction behavior is covered by unit/integration tests plus CDP-driven browser verification runs (see release checklist).
 - Follow-up "due" states evaluate at render time (no background timers by design).
 - Large result sets are capped for public-API friendliness; exports cover displayed results, not unbounded queries.
+- With browser storage fully disabled, a storage warning renders client-only; the app degrades gracefully but React logs a hydration notice in development (production behavior unaffected).
 
 ## Release checklist
 
@@ -96,6 +97,6 @@ CSV (UTF-8 with BOM, RFC 4180 quoting, formula-injection guard, temporary downlo
 - [x] `bun lint` — passing (zero errors/warnings)
 - [x] `bun test` — 156 pass / 0 fail across 20 files
 - [x] `bun run build` — succeeds, all 5 routes prerender static
-- [ ] Manual browser pass (search both modes, save/unsave, lists, workflow panel, CSV download, theme toggle, mobile widths, both themes)
-- [ ] Live provider check from a real network (one Nominatim + Overpass search)
+- [x] Browser pass via CDP-driven headless Chrome against the dev server: all 5 routes render with zero app console errors; demo search → save → reload persistence → saved-leads display; list create + add-to-list membership; saved CSV download verified byte-level (header, BOM, saved record); theme toggle persists; live error states with retry; 390px viewport with zero horizontal overflow; back-button restores mode/form/results
+- [x] Live provider check: Nominatim verified (HTTP 200); one full Overpass search verified live in-browser (10 Berlin results, dedupe, scores, attribution, snapshot save). Sandbox egress is intermittent (406 stalls/timeouts) — the app surfaces typed errors with retry in all observed cases
 - [ ] Owner deploys: `bun install && bun run build` on Vercel (no env vars to configure), then smoke-tests the deployed URL
