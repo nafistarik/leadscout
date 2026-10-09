@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
+  companyToRow,
+  demoToRow,
   exportFilename,
   rowsToCsv,
   savedRecordsToRows,
@@ -51,6 +53,8 @@ describe("rowsToCsv", () => {
         source: "OpenStreetMap",
         sourceUrl: "",
         savedAt: "",
+        fitScore: "",
+        availableDetails: "",
       },
     ]);
     expect(csv).toContain('"Say ""hi"", Bob\nJr"');
@@ -73,6 +77,8 @@ describe("rowsToCsv", () => {
         source: "",
         sourceUrl: "",
         savedAt: "",
+        fitScore: "",
+        availableDetails: "",
       },
     ]);
     expect(csv).toContain("'=HYPERLINK");
@@ -97,6 +103,8 @@ describe("rowsToCsv", () => {
         source: "OpenStreetMap",
         sourceUrl: "",
         savedAt: "",
+        fitScore: "",
+        availableDetails: "",
       },
     ]);
     expect(csv).toContain("Plain Bakery,Bakery,Berlin,Germany,https://example.com");
@@ -148,5 +156,62 @@ describe("exportFilename", () => {
   test("produces a filesystem-safe timestamped name", () => {
     const name = exportFilename(new Date(2026, 9, 9, 23, 15));
     expect(name).toBe("leadscout-leads-20261009-2315.csv");
+  });
+
+  test("distinguishes saved-lead and search-result scopes", () => {
+    const date = new Date(2026, 9, 9, 23, 15);
+    expect(exportFilename(date, "search")).toBe("leadscout-search-20261009-2315.csv");
+    expect(exportFilename(date, "leads")).toBe("leadscout-leads-20261009-2315.csv");
+  });
+});
+
+describe("companyToRow / demoToRow", () => {
+  test("includes fit score and available details for companies", () => {
+    const row = companyToRow(
+      company({ website: "https://a.example", phone: "123" }),
+      "2026-01-01",
+      65,
+    );
+    expect(row.fitScore).toBe("65");
+    expect(row.availableDetails).toBe("website; phone; coordinates");
+    expect(row.savedAt).toBe("2026-01-01");
+  });
+
+  test("leaves score blank when unknown and details blank when absent", () => {
+    const row = companyToRow(company({ lat: null, lon: null }), "");
+    expect(row.fitScore).toBe("");
+    expect(row.availableDetails).toBe("");
+    expect(row.savedAt).toBe("");
+  });
+
+  test("demo rows label sample availability flags honestly", () => {
+    const row = demoToRow(
+      {
+        id: "demo-01",
+        companyName: "Sample Co",
+        category: "Bakery",
+        city: "Berlin",
+        country: "Germany",
+        websiteAvailable: true,
+        phoneAvailable: false,
+      },
+      "2026-01-01",
+    );
+    expect(row.availableDetails).toBe("website");
+    expect(row.fitScore).toBe("");
+    expect(row.source).toBe("Demo (sample)");
+  });
+
+  test("preserves Bengali and other Unicode names byte-for-byte", () => {
+    const name = "ঢাকা বেকারি হাউস";
+    const csv = rowsToCsv([companyToRow(company({ name }), "", null)]);
+    expect(csv).toContain(name);
+  });
+
+  test("new columns keep existing column order stable", () => {
+    const csv = rowsToCsv([]);
+    const header = csv.trim();
+    expect(header.startsWith("Name,Category,City")).toBe(true);
+    expect(header.endsWith("Saved at,Fit score,Available details")).toBe(true);
   });
 });

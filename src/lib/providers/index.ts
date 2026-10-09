@@ -36,6 +36,15 @@ function requestKey(request: ProviderSearchRequest): string {
   });
 }
 
+/**
+ * Cache key for a search request. Only provider-side criteria participate —
+ * client-side refinements (availability, score, sort) must never bust the
+ * cache or trigger new requests. Exported for tests.
+ */
+export function providerRequestKey(request: ProviderSearchRequest): string {
+  return requestKey(request);
+}
+
 function resultLimit(maxResults: number): number {
   return Number.isFinite(maxResults) && maxResults > 0 ? Math.min(Math.floor(maxResults), 50) : 10;
 }

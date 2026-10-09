@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { BookmarkX, Download } from "lucide-react";
 import { CompanyTable } from "@/components/companies/company-table";
+import { ResearchActions } from "@/components/companies/research-actions";
 import { LeadTable } from "@/components/leads/lead-table";
 import { AddToListControl } from "@/components/lists/add-to-list-control";
 import { DemoBadge } from "@/components/ui/badge";
@@ -59,9 +60,14 @@ export default function SavedLeadsClient() {
             </p>
           </div>
           {records.length > 0 ? (
-            <Button variant="secondary" onClick={handleExport}>
+            <Button
+              variant="secondary"
+              onClick={handleExport}
+              title="Download all saved leads (demo + OpenStreetMap) as CSV"
+              aria-label={`Export all ${records.length} saved leads as CSV`}
+            >
               <Download className="h-4 w-4" aria-hidden="true" />
-              Export CSV ({records.length})
+              Export saved ({records.length})
             </Button>
           ) : null}
         </div>
@@ -105,7 +111,10 @@ export default function SavedLeadsClient() {
                 isSaved={isCompanySaved}
                 onToggleSaved={toggleCompany}
                 extraActions={(company) => (
-                  <AddToListControl leadId={company.id} leadName={company.name} />
+                  <div className="flex flex-col items-end gap-2">
+                    <AddToListControl leadId={company.id} leadName={company.name} />
+                    <ResearchActions company={company} />
+                  </div>
                 )}
                 caption="Saved OpenStreetMap leads"
               />

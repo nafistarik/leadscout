@@ -1,12 +1,14 @@
 import type { DemoLead } from "@/types/lead";
 import type { Company, SavedLeadRecord } from "@/types/company";
+import { describeCompleteness, presentDetailsLabel } from "@/lib/completeness";
 import { normalizeWebsiteUrl } from "@/lib/links";
 
 /**
- * CSV export for saved leads. Client-side only: builds a UTF-8 string
- * (with BOM for spreadsheet apps), escapes per RFC 4180, guards against
- * spreadsheet formula injection from untrusted source data, and downloads
- * via a temporary object URL that is revoked afterwards.
+ * CSV export for saved leads and filtered search results. Client-side only:
+ * builds a UTF-8 string (with BOM for spreadsheet apps), escapes per
+ * RFC 4180, guards against spreadsheet formula injection from untrusted
+ * source data, and downloads via a temporary object URL that is revoked
+ * afterwards. Nothing is ever sent to an external service.
  */
 
 export const CSV_COLUMNS = [
@@ -23,6 +25,8 @@ export const CSV_COLUMNS = [
   "Source",
   "Source URL",
   "Saved at",
+  "Fit score",
+  "Available details",
 ] as const;
 
 export interface CsvRow {
@@ -39,6 +43,10 @@ export interface CsvRow {
   source: string;
   sourceUrl: string;
   savedAt: string;
+  /** Heuristic fit score when computed in a search context, else blank. */
+  fitScore: string;
+  /** Present-field names (e.g. "website; phone"), else blank. */
+  availableDetails: string;
 }
 
 const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
@@ -57,7 +65,7 @@ function escapeField(value: string): string {
   return guarded;
 }
 
-function companyToRow(company: Company, savedAt: string): CsvRow {
+export function companyToRow(company: Company, savedAt: string, fitScore: number | null = null): CsvRow {
   return {
     name: company.name,
     category: company.category,
@@ -72,10 +80,15 @@ function companyToRow(company: Company, savedAt: string): CsvRow {
     source: company.source,
     sourceUrl: company.sourceUrl ?? "",
     savedAt,
+    fitScore: fitScore === null ? "" : String(fitScore),
+    availableDetails: presentDetailsLabel(describeCompleteness(company)),
   };
 }
 
-function demoToRow(demo: DemoLead, savedAt: string): CsvRow {
+export function demoToRow(demo: DemoLead, savedAt: string): CsvRow {
+  const details: string[] = [];
+  if (demo.websiteAvailable) details.push("website");
+  if (demo.phoneAvailable) details.push("phone");
   return {
     name: demo.companyName,
     category: demo.category,
@@ -90,6 +103,8 @@ function demoToRow(demo: DemoLead, savedAt: string): CsvRow {
     source: "Demo (sample)",
     sourceUrl: "",
     savedAt,
+    fitScore: "",
+    availableDetails: details.join("; "),
   };
 }
 
@@ -127,6 +142,8 @@ export function rowsToCsv(rows: CsvRow[]): string {
         row.source,
         row.sourceUrl,
         row.savedAt,
+        row.fitScore,
+        row.availableDetails,
       ]
         .map(escapeField)
         .join(","),
@@ -139,9 +156,11 @@ function pad(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-export function exportFilename(now: Date = new Date()): string {
+export type ExportScope = "leads" | "search";
+
+export function exportFilename(now: Date = new Date(), scope: ExportScope = "leads"): string {
   const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
-  return `leadscout-leads-${stamp}.csv`;
+  return scope === "search" ? `leadscout-search-${stamp}.csv` : `leadscout-leads-${stamp}.csv`;
 }
 
 /** Triggers a client-side download; revokes the object URL afterwards. */

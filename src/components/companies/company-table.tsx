@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Building2, ExternalLink } from "lucide-react";
 import { ScoreBadge } from "@/components/companies/score-badge";
+import { CompletenessMeter } from "@/components/companies/completeness-meter";
 import { SaveLeadButton } from "@/components/leads/save-lead-button";
 import { Badge } from "@/components/ui/badge";
 import { OsmSourceBadge } from "@/components/osm-attribution";
@@ -24,12 +25,18 @@ interface CompanyTableProps {
 function ContactCell({ company }: { company: Company }) {
   const hasAny = company.website || company.phone || company.email;
   if (!hasAny) {
-    return <Badge tone="neutral">Not available</Badge>;
+    return (
+      <>
+        <Badge tone="neutral">Not available</Badge>
+        <CompletenessMeter company={company} />
+      </>
+    );
   }
   const safeWebsite = normalizeWebsiteUrl(company.website);
   const telHref = phoneHref(company.phone);
   const emailOk = isPlausibleEmail(company.email);
   return (
+    <>
     <ul className="space-y-1 text-[13px]">
       {company.website ? (
         <li>
@@ -76,6 +83,8 @@ function ContactCell({ company }: { company: Company }) {
         </li>
       ) : null}
     </ul>
+    <CompletenessMeter company={company} />
+    </>
   );
 }
 

@@ -12,6 +12,8 @@ export const STORAGE_KEYS = {
   theme: "leadscout.theme.v1",
   /** Nominatim geocode cache (query key -> area + timestamp). */
   geocodeCache: "leadscout.geocodeCache.v1",
+  /** Part 4: named search presets (non-sensitive criteria only). */
+  searchPresets: "leadscout.searchPresets.v1",
 } as const;
 
 export function readLocalStorage(key: string): string | null {

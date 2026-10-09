@@ -19,6 +19,7 @@ declare module "bun:test" {
     toBeLessThan(n: number): void;
     toHaveLength(n: number): void;
     toMatch(pattern: string | RegExp): void;
+    toBeInstanceOf(expected: unknown): void;
     toThrow(expected?: string | RegExp): void;
     not: Matchers;
   }
