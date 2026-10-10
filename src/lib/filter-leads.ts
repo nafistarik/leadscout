@@ -15,7 +15,7 @@ export interface ProviderCriteria {
 }
 
 /** Client-side result options: applied locally to fetched results, no network. */
-export type SortOrder = "provider" | "relevance" | "name" | "info" | "score";
+export type SortOrder = "provider" | "relevance" | "name" | "info" | "score" | "opportunity";
 
 export interface LocalResultOptions {
   hasWebsite: boolean;
@@ -191,6 +191,8 @@ export interface SortContext {
   keyword: string;
   scoreOf: (id: string) => number | null;
   infoOf: (id: string) => number;
+  /** Pitch-opportunity rank (lower = better target); live results only. */
+  opportunityOf?: (id: string) => number | null;
 }
 
 /**
@@ -218,6 +220,10 @@ export function sortByIdOrder<T extends { id: string }>(
       case "score": {
         const score = context.scoreOf(id);
         return score === null ? Number.MAX_SAFE_INTEGER : -score;
+      }
+      case "opportunity": {
+        const rank = context.opportunityOf?.(id) ?? null;
+        return rank === null ? Number.MAX_SAFE_INTEGER : rank;
       }
       case "name":
         return 0;

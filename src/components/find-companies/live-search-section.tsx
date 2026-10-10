@@ -15,6 +15,8 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { CompanyTable } from "@/components/companies/company-table";
+import { PitchToolbar } from "@/components/find-companies/pitch-toolbar";
+import type { PitchFocus } from "@/components/find-companies/pitch-toolbar";
 import { ResearchActions } from "@/components/companies/research-actions";
 import { ScoreLegend } from "@/components/companies/score-badge";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +41,13 @@ import type { SearchHistoryEntry } from "@/lib/search-history";
 import { useCompanySearch } from "@/hooks/use-company-search";
 import type { SearchError } from "@/hooks/use-company-search";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
+import { useWebsiteChecks } from "@/hooks/use-website-analysis";
+import { computeOpportunity } from "@/lib/opportunity";
+import type { Opportunity } from "@/lib/opportunity";
+import { describeOsmDetails } from "@/lib/osm-details";
+import type { OsmDetails } from "@/lib/osm-details";
+import { websiteVerdict } from "@/lib/website-analysis";
+import type { WebsiteAnalysis } from "@/lib/website-analysis";
 import {
   EMPTY_FILTERS,
   PROVIDER_FILTER_KEYS,
@@ -61,6 +70,31 @@ import {
   writtenUrlKey,
 } from "@/lib/search-params";
 import type { SearchMode } from "@/lib/search-params";
+
+interface RowInsight {
+  details: OsmDetails;
+  site: string | null;
+  analysis: WebsiteAnalysis | null;
+  opportunity: Opportunity;
+}
+
+function matchesFocus(insight: RowInsight | undefined, focus: PitchFocus): boolean {
+  if (!insight) return false;
+  switch (focus) {
+    case "all":
+      return true;
+    case "hot":
+      return insight.opportunity.level === "high";
+    case "no-website":
+      return insight.details.websiteKind === "none";
+    case "social":
+      return insight.details.websiteKind === "social";
+    case "site-issues":
+      return insight.analysis !== null && websiteVerdict(insight.analysis) !== "modern";
+    case "unchecked":
+      return insight.site !== null && insight.analysis === null;
+  }
+}
 
 function ErrorState({ error, onRetry }: { error: SearchError; onRetry: () => void }) {
   const Icon = error.kind === "location-not-found" ? MapPin : AlertTriangle;
@@ -235,6 +269,21 @@ export function LiveSearchSection({
     );
   }, [companies, submittedFilters]);
 
+  const checks = useWebsiteChecks();
+  const [focus, setFocus] = useState<PitchFocus>("all");
+  const insights = useMemo(
+    () =>
+      new Map(
+        companies.map((company): [string, RowInsight] => {
+          const details = describeOsmDetails(company);
+          const site = details.websiteKind === "site" ? company.website : null;
+          const analysis = site ? checks.analysisFor(site) : null;
+          return [company.id, { details, site, analysis, opportunity: computeOpportunity(company, details, analysis) }];
+        }),
+      ),
+    [companies, checks],
+  );
+
   const activeDescriptions = submittedFilters ? describeActiveFilters(submittedFilters) : [];
   // Provider-side dirty check only: local refinements apply instantly and
   // never require a re-search.
@@ -258,19 +307,37 @@ export function LiveSearchSection({
       new Map(companies.map((company) => [company.id, infoCompleteness(company)])),
     [companies],
   );
-  const displayed = useMemo(() => {
+  const refined = useMemo(() => {
     const narrowed = applyAvailabilityFilters(companies, filters);
-    const scored = applyMinScoreFilter(narrowed, filters.minScore, (item) =>
+    return applyMinScoreFilter(narrowed, filters.minScore, (item) =>
       scores?.get(item.id)?.score ?? null,
     );
-    return sortByIdOrder(scored, names, filters.sort, {
+  }, [companies, filters, scores]);
+  const displayed = useMemo(() => {
+    const focused =
+      focus === "all" ? refined : refined.filter((company) => matchesFocus(insights.get(company.id), focus));
+    return sortByIdOrder(focused, names, filters.sort, {
       keyword: submittedFilters?.keyword ?? "",
       scoreOf: (id) => scores?.get(id)?.score ?? null,
       infoOf: (id) => infoById.get(id) ?? 0,
+      opportunityOf: (id) => insights.get(id)?.opportunity.rank ?? null,
     });
-  }, [companies, filters, infoById, names, scores, submittedFilters]);
+  }, [refined, focus, insights, infoById, names, scores, filters.sort, submittedFilters]);
+  const focusCounts = useMemo(() => {
+    const values: PitchFocus[] = ["all", "hot", "no-website", "social", "site-issues", "unchecked"];
+    return Object.fromEntries(
+      values.map((value) => [
+        value,
+        refined.filter((company) => matchesFocus(insights.get(company.id), value)).length,
+      ]),
+    ) as Record<PitchFocus, number>;
+  }, [refined, insights]);
+  const uncheckedSites = displayed
+    .map((company) => insights.get(company.id))
+    .filter((insight) => insight?.site && !insight.analysis && !checks.stateFor(insight.site))
+    .map((insight) => insight?.site ?? null);
 
-  const localActive = hasLocalFilters(filters);
+  const localActive = hasLocalFilters(filters) || focus !== "all";
   const chips: FilterChip[] = [];
   if (filters.hasWebsite) chips.push({ key: "hasWebsite", label: "Website available" });
   if (filters.hasPhone) chips.push({ key: "hasPhone", label: "Phone available" });
@@ -286,6 +353,7 @@ export function LiveSearchSection({
   }
 
   function clearAllLocal() {
+    setFocus("all");
     setFilters((current) => ({
       ...current,
       hasWebsite: false,
@@ -299,7 +367,13 @@ export function LiveSearchSection({
 
   function handleExportResults() {
     const rows = displayed.map((company) =>
-      companyToRow(company, "", scores?.get(company.id)?.score ?? null),
+      companyToRow(
+        company,
+        "",
+        scores?.get(company.id)?.score ?? null,
+        undefined,
+        insights.get(company.id)?.analysis ?? null,
+      ),
     );
     downloadCsv(rowsToCsv(rows), exportFilename(new Date(), "search"));
   }
@@ -462,6 +536,7 @@ export function LiveSearchSection({
               value={filters.sort}
               onChange={(sort: SortOrder) => update("sort", sort)}
               includeScore={showScores}
+              includeOpportunity
               scoreDisabledReason="Enable fit scores above to sort by score."
             />
           </div>
@@ -546,6 +621,13 @@ export function LiveSearchSection({
                 </div>
               </div>
               <ActiveFilterChips chips={chips} onRemove={clearLocalFilter} onClearAll={clearAllLocal} />
+              <PitchToolbar
+                focus={focus}
+                counts={focusCounts}
+                onFocusChange={setFocus}
+                uncheckedSites={uncheckedSites}
+                checks={checks}
+              />
               {isDirty ? (
                 <p role="status" className="neu-recessed rounded-lg bg-recessed p-3 text-[13px] text-status-info-fg">
                   Search criteria changed since these results were fetched — select Search Companies to

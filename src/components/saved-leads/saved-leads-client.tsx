@@ -15,6 +15,7 @@ import { LeadWorkflowPanel } from "@/components/workflow/lead-workflow-panel";
 import { getLeadById } from "@/data/demo-leads";
 import { useLeadWorkflow } from "@/hooks/use-lead-workflow";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
+import { useWebsiteChecks } from "@/hooks/use-website-analysis";
 import { downloadCsv, exportFilename, rowsToCsv, savedRecordsToRows } from "@/lib/csv";
 import { effectiveStatus, signalsFromCompany, signalsFromDemoLead } from "@/lib/workflow";
 import { LEAD_STATUS_LABELS, LEAD_STATUSES } from "@/types/workflow";
@@ -36,6 +37,7 @@ export default function SavedLeadsClient() {
   } = useSavedLeads();
 
   const { getWorkflow } = useLeadWorkflow();
+  const checks = useWebsiteChecks();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const matchesStatusFilter = (recordId: string): boolean =>
@@ -76,7 +78,9 @@ export default function SavedLeadsClient() {
   }
 
   function handleExport() {
-    const rows = savedRecordsToRows(records, getLeadById, getWorkflow);
+    const rows = savedRecordsToRows(records, getLeadById, getWorkflow, (company) =>
+      checks.analysisFor(company.website),
+    );
     downloadCsv(rowsToCsv(rows), exportFilename());
   }
 

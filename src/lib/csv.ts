@@ -4,6 +4,10 @@ import { LEAD_STATUS_LABELS, NEXT_ACTION_LABELS } from "@/types/workflow";
 import type { LeadWorkflow } from "@/types/workflow";
 import { describeCompleteness, presentDetailsLabel } from "@/lib/completeness";
 import { normalizeWebsiteUrl } from "@/lib/links";
+import { computeOpportunity } from "@/lib/opportunity";
+import { describeOsmDetails, SOCIAL_LABELS } from "@/lib/osm-details";
+import { VERDICT_LABELS, websiteVerdict } from "@/lib/website-analysis";
+import type { WebsiteAnalysis } from "@/lib/website-analysis";
 
 /**
  * CSV export for saved leads and filtered search results. Client-side only:
@@ -33,6 +37,22 @@ export const CSV_COLUMNS = [
   "Next action",
   "Follow up",
   "Notes",
+  "Pitch opportunity",
+  "Opportunity reasons",
+  "Address",
+  "All phones",
+  "All emails",
+  "Social profiles",
+  "Website status",
+  "Website issues",
+  "HTTPS",
+  "Mobile friendly",
+  "Copyright year",
+  "Site platform",
+  "Emails on website",
+  "Phones on website",
+  "Socials on website",
+  "Website checked at",
 ] as const;
 
 export interface CsvRow {
@@ -58,6 +78,91 @@ export interface CsvRow {
   nextAction: string;
   followUp: string;
   notes: string;
+  pitchOpportunity: string;
+  opportunityReasons: string;
+  address: string;
+  allPhones: string;
+  allEmails: string;
+  socialProfiles: string;
+  websiteStatus: string;
+  websiteIssues: string;
+  https: string;
+  mobileFriendly: string;
+  copyrightYear: string;
+  sitePlatform: string;
+  websiteEmails: string;
+  websitePhones: string;
+  websiteSocials: string;
+  websiteCheckedAt: string;
+}
+
+/** Pitch columns: blank for demo rows and for anything not known. */
+type PitchColumns = Pick<
+  CsvRow,
+  | "pitchOpportunity"
+  | "opportunityReasons"
+  | "address"
+  | "allPhones"
+  | "allEmails"
+  | "socialProfiles"
+  | "websiteStatus"
+  | "websiteIssues"
+  | "https"
+  | "mobileFriendly"
+  | "copyrightYear"
+  | "sitePlatform"
+  | "websiteEmails"
+  | "websitePhones"
+  | "websiteSocials"
+  | "websiteCheckedAt"
+>;
+
+export const BLANK_PITCH_COLUMNS: PitchColumns = {
+  pitchOpportunity: "",
+  opportunityReasons: "",
+  address: "",
+  allPhones: "",
+  allEmails: "",
+  socialProfiles: "",
+  websiteStatus: "",
+  websiteIssues: "",
+  https: "",
+  mobileFriendly: "",
+  copyrightYear: "",
+  sitePlatform: "",
+  websiteEmails: "",
+  websitePhones: "",
+  websiteSocials: "",
+  websiteCheckedAt: "",
+};
+
+function yesNo(value: boolean | null): string {
+  return value === null ? "" : value ? "yes" : "no";
+}
+
+function pitchColumns(company: Company, analysis: WebsiteAnalysis | null): PitchColumns {
+  const details = describeOsmDetails(company);
+  const opportunity = computeOpportunity(company, details, analysis);
+  const socials = (links: { network: keyof typeof SOCIAL_LABELS; url: string }[]): string =>
+    links.map((link) => `${SOCIAL_LABELS[link.network]}: ${link.url}`).join("; ");
+  return {
+    pitchOpportunity: `${opportunity.level} — ${opportunity.label}`,
+    opportunityReasons: opportunity.reasons.join(" | "),
+    address: details.address ?? "",
+    allPhones: details.phones.join("; "),
+    allEmails: details.emails.join("; "),
+    socialProfiles: socials(details.socials),
+    websiteStatus: analysis ? VERDICT_LABELS[websiteVerdict(analysis)] : details.websiteKind === "site" ? "not checked" : "",
+    websiteIssues: analysis ? analysis.issues.map((issue) => issue.label).join(" | ") : "",
+    https: analysis ? (analysis.https === "unknown" ? "" : analysis.https) : "",
+    mobileFriendly: analysis ? yesNo(analysis.mobileFriendly) : "",
+    copyrightYear: analysis?.copyrightYear ? String(analysis.copyrightYear) : "",
+    sitePlatform: analysis?.platform ?? "",
+    websiteEmails: analysis ? analysis.emails.join("; ") : "",
+    websitePhones: analysis ? analysis.phones.join("; ") : "",
+    websiteSocials: analysis ? socials(analysis.socials) : "",
+    websiteCheckedAt: analysis?.analyzedAt ?? "",
+  };
 }
 
 /** User workflow columns, shared by company and demo rows. */
@@ -94,6 +199,7 @@ export function companyToRow(
   savedAt: string,
   fitScore: number | null = null,
   workflow?: LeadWorkflow,
+  analysis: WebsiteAnalysis | null = null,
 ): CsvRow {
   return {
     name: company.name,
@@ -112,6 +218,7 @@ export function companyToRow(
     fitScore: fitScore === null ? "" : String(fitScore),
     availableDetails: presentDetailsLabel(describeCompleteness(company)),
     ...workflowColumns(workflow),
+    ...pitchColumns(company, analysis),
   };
 }
 
@@ -136,6 +243,7 @@ export function demoToRow(demo: DemoLead, savedAt: string, workflow?: LeadWorkfl
     fitScore: "",
     availableDetails: details.join("; "),
     ...workflowColumns(workflow),
+    ...BLANK_PITCH_COLUMNS,
   };
 }
 
@@ -143,12 +251,15 @@ export function savedRecordsToRows(
   records: SavedLeadRecord[],
   demoById: (demoId: string) => DemoLead | undefined,
   getWorkflow?: (recordId: string) => LeadWorkflow | undefined,
+  getAnalysis?: (company: Company) => WebsiteAnalysis | null,
 ): CsvRow[] {
   const rows: CsvRow[] = [];
   for (const record of records) {
     const workflow = getWorkflow?.(record.id);
     if (record.kind === "osm") {
-      rows.push(companyToRow(record.company, record.savedAt, null, workflow));
+      rows.push(
+        companyToRow(record.company, record.savedAt, null, workflow, getAnalysis?.(record.company) ?? null),
+      );
     } else {
       const demo = demoById(record.demoId);
       if (demo) rows.push(demoToRow(demo, record.savedAt, workflow));
@@ -181,6 +292,22 @@ export function rowsToCsv(rows: CsvRow[]): string {
         row.nextAction,
         row.followUp,
         row.notes,
+        row.pitchOpportunity,
+        row.opportunityReasons,
+        row.address,
+        row.allPhones,
+        row.allEmails,
+        row.socialProfiles,
+        row.websiteStatus,
+        row.websiteIssues,
+        row.https,
+        row.mobileFriendly,
+        row.copyrightYear,
+        row.sitePlatform,
+        row.websiteEmails,
+        row.websitePhones,
+        row.websiteSocials,
+        row.websiteCheckedAt,
       ]
         .map(escapeField)
         .join(","),

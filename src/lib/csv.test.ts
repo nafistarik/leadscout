@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  BLANK_PITCH_COLUMNS,
   companyToRow,
   demoToRow,
   exportFilename,
@@ -59,6 +60,7 @@ describe("rowsToCsv", () => {
         nextAction: "",
         followUp: "",
         notes: "",
+        ...BLANK_PITCH_COLUMNS,
       },
     ]);
     expect(csv).toContain('"Say ""hi"", Bob\nJr"');
@@ -87,6 +89,7 @@ describe("rowsToCsv", () => {
         nextAction: "",
         followUp: "",
         notes: "",
+        ...BLANK_PITCH_COLUMNS,
       },
     ]);
     expect(csv).toContain("'=HYPERLINK");
@@ -117,6 +120,7 @@ describe("rowsToCsv", () => {
         nextAction: "",
         followUp: "",
         notes: "",
+        ...BLANK_PITCH_COLUMNS,
       },
     ]);
     expect(csv).toContain("Plain Bakery,Bakery,Berlin,Germany,https://example.com");
@@ -224,7 +228,9 @@ describe("companyToRow / demoToRow", () => {
     const csv = rowsToCsv([]);
     const header = csv.trim();
     expect(header.startsWith("Name,Category,City")).toBe(true);
-    expect(header.endsWith("Saved at,Fit score,Available details,Status,Next action,Follow up,Notes")).toBe(true);
+    expect(header).toContain("Saved at,Fit score,Available details,Status,Next action,Follow up,Notes,");
+    // Pitch columns are appended after the original ones.
+    expect(header.endsWith("Emails on website,Phones on website,Socials on website,Website checked at")).toBe(true);
   });
 
   test("search-scope rows carry score with blank saved-at", () => {

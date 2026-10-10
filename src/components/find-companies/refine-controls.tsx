@@ -68,6 +68,7 @@ export const SORT_LABELS: Record<SortOrder, string> = {
   name: "Name (A–Z)",
   info: "Most complete info first",
   score: "Highest fit score first",
+  opportunity: "Best pitch opportunity first",
 };
 
 export function SortSelect({
@@ -75,16 +76,20 @@ export function SortSelect({
   value,
   onChange,
   includeScore,
+  includeOpportunity = false,
   scoreDisabledReason,
 }: {
   id: string;
   value: SortOrder;
   onChange: (sort: SortOrder) => void;
   includeScore: boolean;
+  /** Offer the pitch-opportunity sort (live results only). */
+  includeOpportunity?: boolean;
   scoreDisabledReason?: string;
 }) {
   const options: SortOrder[] = ["provider", "relevance", "name", "info"];
   if (includeScore) options.push("score");
+  if (includeOpportunity) options.push("opportunity");
   return (
     <div>
       <label

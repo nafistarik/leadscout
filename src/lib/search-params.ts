@@ -5,7 +5,7 @@ import type { LeadSearchFilters, SortOrder } from "@/lib/filter-leads";
 
 export type SearchMode = "live" | "demo";
 
-const SORT_ORDERS: readonly SortOrder[] = ["provider", "relevance", "name", "info", "score"];
+const SORT_ORDERS: readonly SortOrder[] = ["provider", "relevance", "name", "info", "score", "opportunity"];
 const MIN_SCORES = [0, 40, 70] as const;
 
 function parseFlag(value: string | null): boolean {

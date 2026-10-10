@@ -18,6 +18,8 @@ export const STORAGE_KEYS = {
   leadWorkflow: "leadscout.leadWorkflow.v1",
   /** Search history: recent provider-side search inputs only (no results). */
   searchHistory: "leadscout.searchHistory.v1",
+  /** Website check results keyed by normalized site address. */
+  websiteAnalysis: "leadscout.websiteAnalysis.v1",
 } as const;
 
 export function readLocalStorage(key: string): string | null {
