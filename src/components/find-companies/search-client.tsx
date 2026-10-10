@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -14,7 +14,6 @@ import {
   X,
 } from "lucide-react";
 import { CompanyTable } from "@/components/companies/company-table";
-import { RecentSearchesSection } from "@/components/find-companies/recent-searches-section";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
@@ -22,7 +21,6 @@ import { Field, SelectInput, TextInput } from "@/components/ui/field";
 import { OsmAttribution } from "@/components/osm-attribution";
 import { LIVE_CATEGORIES, LIVE_COUNTRY_SUGGESTIONS, MAX_RESULTS_OPTIONS } from "@/data/search-options";
 import { useSearchHistory } from "@/hooks/use-search-history";
-import type { SearchHistoryEntry } from "@/lib/search-history";
 import { useCompanySearch } from "@/hooks/use-company-search";
 import type { SearchError } from "@/hooks/use-company-search";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
@@ -35,7 +33,7 @@ import {
   sortByIdOrder,
 } from "@/lib/filter-leads";
 import type { LeadSearchFilters, SortOrder } from "@/lib/filter-leads";
-import { filtersToSearchParams, searchParamsToFilters } from "@/lib/search-params";
+import { AUTO_RUN_PARAM, filtersToSearchParams, searchParamsToFilters } from "@/lib/search-params";
 
 function ErrorState({ error, onRetry }: { error: SearchError; onRetry: () => void }) {
   const Icon = error.kind === "location-not-found" ? MapPin : AlertTriangle;
@@ -92,18 +90,6 @@ function LoadingState() {
   );
 }
 
-function entryToFilters(entry: SearchHistoryEntry): LeadSearchFilters {
-  return {
-    country: entry.country,
-    city: entry.city,
-    category: LIVE_CATEGORIES.includes(entry.category) ? entry.category : "all",
-    keyword: entry.keyword,
-    maxResults: (MAX_RESULTS_OPTIONS as readonly number[]).includes(entry.maxResults)
-      ? entry.maxResults
-      : EMPTY_FILTERS.maxResults,
-  };
-}
-
 export function SearchClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -113,9 +99,24 @@ export function SearchClient() {
     useCompanySearch();
   const checks = useWebsiteChecks();
 
-  // Shared links restore the form; searches always run on submit only.
+  // Shared links restore the form; manual visits and plain links never
+  // auto-run. A `run=1` parameter (set when picking a recent search from
+  // another page) restores the form and triggers exactly one search.
   const [filters, setFilters] = useState<LeadSearchFilters>(() => searchParamsToFilters(searchParams));
   const [sort, setSort] = useState<SortOrder>("provider");
+  const autoRunFired = useRef(false);
+
+  useEffect(() => {
+    if (autoRunFired.current || searchParams.get(AUTO_RUN_PARAM) !== "1") return;
+    autoRunFired.current = true;
+    const snapshot = searchParamsToFilters(searchParams);
+    setFilters(snapshot);
+    // Strip the run flag so refreshes and re-renders never re-trigger.
+    const clean = filtersToSearchParams(snapshot).toString();
+    router.replace(clean ? `/find-companies?${clean}` : "/find-companies", { scroll: false });
+    search(snapshot);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only auto-run
+  }, []);
 
   function update<K extends keyof LeadSearchFilters>(key: K, value: LeadSearchFilters[K]) {
     setFilters((current) => ({ ...current, [key]: value }));
@@ -130,12 +131,6 @@ export function SearchClient() {
     const query = filtersToSearchParams(snapshot).toString();
     router.replace(query ? `/find-companies?${query}` : "/find-companies", { scroll: false });
     search(snapshot);
-  }
-
-  function applyHistory(entry: SearchHistoryEntry) {
-    const next = entryToFilters(entry);
-    setFilters(next);
-    submitFilters(next);
   }
 
   function handleReset() {
@@ -195,15 +190,7 @@ export function SearchClient() {
   const paused = checks.pausedUntil > 0;
 
   return (
-    <div className="space-y-10">
-      <section aria-label="About this search">
-        <p className="max-w-3xl text-sm leading-relaxed text-ink2">
-          Search real businesses from <strong className="font-semibold text-ink">OpenStreetMap</strong> by
-          city and category, inspect their contact details, check their websites, and save promising
-          leads. Coverage depends on community mapping and varies by area.
-        </p>
-      </section>
-
+    <div className="space-y-8">
       <section aria-labelledby="search-heading" className="space-y-6">
         <h2 id="search-heading" className="sr-only">
           Search companies
@@ -405,8 +392,6 @@ export function SearchClient() {
           )}
         </div>
       </section>
-
-      <RecentSearchesSection onApply={applyHistory} />
     </div>
   );
 }

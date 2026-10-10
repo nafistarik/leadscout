@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Header, MobileNavCloseButton } from "@/components/layout/header";
+import { CONTAINER_CLASS } from "@/components/layout/container";
 import { SidebarContent } from "@/components/layout/sidebar";
 import { OsmAttribution } from "@/components/osm-attribution";
 
@@ -62,10 +63,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="md:pl-64">
         <Header pathname={pathname} onOpenMobileNav={() => setMobileOpen(true)} />
-        <main id="main-content" className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <main id="main-content" className={`${CONTAINER_CLASS} py-6`}>
           {children}
         </main>
-        <footer className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6 lg:px-8">
+        <footer className={`${CONTAINER_CLASS} pb-8`}>
           <div className="border-t border-line-soft pt-4">
             <OsmAttribution />
           </div>

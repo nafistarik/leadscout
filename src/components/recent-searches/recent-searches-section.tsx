@@ -1,9 +1,14 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { History, X } from "lucide-react";
 import { useSearchHistory } from "@/hooks/use-search-history";
 import { describeHistoryEntry } from "@/lib/search-history";
-import type { SearchHistoryEntry } from "@/lib/search-history";
+import {
+  AUTO_RUN_PARAM,
+  filtersToSearchParams,
+  historyEntryToFilters,
+} from "@/lib/search-params";
 
 function formatDate(iso: string): string {
   try {
@@ -17,17 +22,24 @@ function formatDate(iso: string): string {
 }
 
 /**
- * Recent searches at the bottom of the search experience. Selecting an entry
- * restores its criteria and runs the search again; results are never stored.
+ * Shared recent-search list backed by the single local search history.
+ * Selecting an entry navigates to Find Companies, restores its criteria,
+ * and runs the live search exactly once (via the `run` URL parameter —
+ * see SearchClient). Results are never stored.
  */
-export function RecentSearchesSection({
-  onApply,
-}: {
-  onApply: (entry: SearchHistoryEntry) => void;
-}) {
+export function RecentSearchesSection() {
+  const router = useRouter();
   const { history, removeEntry, clearHistory } = useSearchHistory();
 
   if (history.length === 0) return null;
+
+  function handleApply(id: string) {
+    const entry = history.find((item) => item.id === id);
+    if (!entry) return;
+    const params = filtersToSearchParams(historyEntryToFilters(entry));
+    params.set(AUTO_RUN_PARAM, "1");
+    router.push(`/find-companies?${params.toString()}`);
+  }
 
   return (
     <section aria-labelledby="recent-searches-heading">
@@ -55,7 +67,7 @@ export function RecentSearchesSection({
           >
             <button
               type="button"
-              onClick={() => onApply(entry)}
+              onClick={() => handleApply(entry.id)}
               title={`Run again: ${describeHistoryEntry(entry)}`}
               className="min-w-0 flex-1 cursor-pointer truncate text-left text-[13px] text-ink2 hover:text-ink"
             >
@@ -79,4 +91,3 @@ export function RecentSearchesSection({
     </section>
   );
 }
-

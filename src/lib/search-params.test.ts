@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { EMPTY_FILTERS } from "@/lib/filter-leads";
 import {
+  AUTO_RUN_PARAM,
   filtersToSearchParams,
+  historyEntryToFilters,
   searchParamsToFilters,
 } from "@/lib/search-params";
 
@@ -77,5 +79,50 @@ describe("filtersToSearchParams", () => {
       city: "Berlin",
     }).toString();
     expect(query).not.toMatch(/token|key|secret|password|email|saved/i);
+  });
+
+  test("ignores the auto-run flag when restoring filters", () => {
+    const restored = searchParamsToFilters(params(`city=Berlin&${AUTO_RUN_PARAM}=1`));
+    expect(restored).toEqual({ ...EMPTY_FILTERS, city: "Berlin" });
+  });
+});
+
+describe("historyEntryToFilters", () => {
+  test("converts a stored entry back into validated filters", () => {
+    expect(
+      historyEntryToFilters({
+        id: "a",
+        country: "Germany",
+        city: "Berlin",
+        category: "Bakery",
+        keyword: "rye",
+        maxResults: 25,
+        searchedAt: "x",
+        resultCount: 10,
+        websiteIds: ["osm:node/1"],
+      }),
+    ).toEqual({
+      country: "Germany",
+      city: "Berlin",
+      category: "Bakery",
+      keyword: "rye",
+      maxResults: 25,
+    });
+  });
+
+  test("falls back for stale categories and limits", () => {
+    expect(
+      historyEntryToFilters({
+        id: "a",
+        country: "",
+        city: "Berlin",
+        category: "Nope",
+        keyword: "",
+        maxResults: 999,
+        searchedAt: "x",
+        resultCount: 0,
+        websiteIds: [],
+      }),
+    ).toEqual({ ...EMPTY_FILTERS, city: "Berlin" });
   });
 });

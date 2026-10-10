@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bookmark, LayoutDashboard, Search, Telescope } from "lucide-react";
+import { useState } from "react";
+import { Bookmark, LayoutDashboard, Search, Telescope, Trash2 } from "lucide-react";
+import { notifyStorageChanged } from "@/hooks/use-local-storage-value";
+import { STORAGE_KEYS } from "@/lib/storage";
 import { cn } from "@/lib/storage";
 
 export const NAV_ITEMS = [
@@ -14,6 +17,66 @@ export const NAV_ITEMS = [
 function isActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/**
+ * Compact destructive action anchored at the bottom of the sidebar.
+ * Clears saved leads, recent searches, and search statistics after explicit
+ * confirmation. Theme preference and provider/website caches are kept.
+ */
+function ClearLocalData() {
+  const [confirming, setConfirming] = useState(false);
+
+  function handleClear() {
+    try {
+      window.localStorage.removeItem(STORAGE_KEYS.savedLeadsV2);
+      window.localStorage.removeItem(STORAGE_KEYS.searchHistory);
+      notifyStorageChanged();
+    } catch {
+      // Storage unavailable: nothing to clear.
+    }
+    setConfirming(false);
+  }
+
+  if (confirming) {
+    return (
+      <div className="rounded-lg border border-status-error-line bg-status-error-bg p-3">
+        <p className="text-xs font-medium text-status-error-fg">
+          Clear saved leads, searches & stats?
+        </p>
+        <p className="mt-1 text-[11px] leading-relaxed text-status-error-fg opacity-90">
+          Cannot be undone. Theme and caches are kept.
+        </p>
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={handleClear}
+            className="cursor-pointer rounded-md bg-status-error-fg px-2 py-1 text-xs font-semibold text-status-error-bg"
+          >
+            Yes, clear
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirming(false)}
+            className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-status-error-fg hover:underline"
+          >
+            Keep
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setConfirming(true)}
+      className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-ink2 transition-colors hover:bg-recessed hover:text-status-error-fg"
+    >
+      <Trash2 className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+      Clear local data
+    </button>
+  );
 }
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
@@ -67,6 +130,10 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           })}
         </ul>
       </nav>
+
+      <div className="mt-6 border-t border-line-soft pt-4">
+        <ClearLocalData />
+      </div>
     </div>
   );
 }

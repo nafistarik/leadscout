@@ -2,6 +2,10 @@ import { MAX_RESULTS_OPTIONS } from "@/data/search-options";
 import { LIVE_CATEGORIES } from "@/data/search-options";
 import { EMPTY_FILTERS } from "@/lib/filter-leads";
 import type { LeadSearchFilters } from "@/lib/filter-leads";
+import type { SearchHistoryEntry } from "@/lib/search-history";
+
+/** Query parameter that triggers exactly one automatic search on arrival. */
+export const AUTO_RUN_PARAM = "run";
 
 function parseMaxResults(value: string | null): number {
   const num = Number(value);
@@ -45,4 +49,20 @@ export function filtersToSearchParams(filters: LeadSearchFilters): URLSearchPara
     params.set("max", String(filters.maxResults));
   }
   return params;
+}
+
+/**
+ * Converts a stored history entry back into validated search filters.
+ * Stale categories or limits fall back to defaults — never throws.
+ */
+export function historyEntryToFilters(entry: SearchHistoryEntry): LeadSearchFilters {
+  return {
+    country: entry.country,
+    city: entry.city,
+    category: LIVE_CATEGORIES.includes(entry.category) ? entry.category : "all",
+    keyword: entry.keyword,
+    maxResults: (MAX_RESULTS_OPTIONS as readonly number[]).includes(entry.maxResults)
+      ? entry.maxResults
+      : EMPTY_FILTERS.maxResults,
+  };
 }

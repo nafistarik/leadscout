@@ -2,6 +2,7 @@
 
 import { Menu, Moon, Sun, X } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
+import { CONTAINER_CLASS } from "@/components/layout/container";
 import { cn } from "@/lib/storage";
 
 const TITLES: Record<string, { title: string; trail: string }> = {
@@ -15,39 +16,34 @@ function ThemeSwitch() {
   const dark = theme === "dark";
 
   return (
-    <div className="flex shrink-0 items-center gap-2">
-      <span aria-hidden="true" className="hidden text-[13px] font-medium text-ink2 sm:inline">
-        {dark ? "Dark" : "Light"}
-      </span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={dark}
-        aria-label={`Color theme, currently ${dark ? "dark" : "light"}. Activate to switch to ${dark ? "light" : "dark"}.`}
-        title={dark ? "Switch to light theme" : "Switch to dark theme"}
-        onClick={toggleTheme}
-        className="neu-recessed relative h-8 w-[60px] shrink-0 cursor-pointer rounded-full border border-line-soft bg-recessed"
+    <button
+      type="button"
+      role="switch"
+      aria-checked={dark}
+      aria-label={`Color theme, currently ${dark ? "dark" : "light"}. Activate to switch to ${dark ? "light" : "dark"}.`}
+      title={dark ? "Switch to light theme" : "Switch to dark theme"}
+      onClick={toggleTheme}
+      className="neu-recessed relative h-8 w-[60px] shrink-0 cursor-pointer rounded-full border border-line-soft bg-recessed"
+    >
+      <Sun
+        aria-hidden="true"
+        className="absolute left-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink3"
+      />
+      <Moon
+        aria-hidden="true"
+        className="absolute right-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink3"
+      />
+      <span
+        aria-hidden="true"
+        className={cn(
+          "neu-raised-sm absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-raised text-accent-ink",
+          "transition-transform [transition-duration:var(--duration-base)] [transition-timing-function:var(--ease-out)]",
+          dark ? "translate-x-8" : "translate-x-1",
+        )}
       >
-        <Sun
-          aria-hidden="true"
-          className="absolute left-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink3"
-        />
-        <Moon
-          aria-hidden="true"
-          className="absolute right-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink3"
-        />
-        <span
-          aria-hidden="true"
-          className={cn(
-            "neu-raised-sm absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-raised text-accent-ink",
-            "transition-transform [transition-duration:var(--duration-base)] [transition-timing-function:var(--ease-out)]",
-            dark ? "translate-x-8" : "translate-x-1",
-          )}
-        >
-          {dark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-        </span>
-      </button>
-    </div>
+        {dark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+      </span>
+    </button>
   );
 }
 
@@ -62,7 +58,7 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-app/95 backdrop-blur">
-      <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
+      <div className={`${CONTAINER_CLASS} flex h-16 items-center gap-3`}>
         <button
           type="button"
           onClick={onOpenMobileNav}

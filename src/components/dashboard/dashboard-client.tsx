@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Bookmark, Building2, Globe2, Search } from "lucide-react";
-import { LocalDataSection } from "@/components/dashboard/local-data-section";
+import { RecentSearchesSection } from "@/components/recent-searches/recent-searches-section";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
@@ -103,7 +103,7 @@ export function DashboardClient() {
         </p>
       </section>
 
-      <LocalDataSection />
+      <RecentSearchesSection />
     </div>
   );
 }

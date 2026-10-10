@@ -1,6 +1,6 @@
 # LeadScout
 
-LeadScout is a frontend-only single-page web app that helps freelance web developers discover potential business clients. Search real businesses through OpenStreetMap data, inspect their contact details, check their websites, and save promising leads.
+LeadScout is a frontend-only web app that helps freelance web developers discover potential business clients. Search real businesses through OpenStreetMap data, inspect their contact details, check their websites, and save promising leads.
 
 There is no backend, no database, no account system, and no paid API. All user data stays in the browser's local storage on the current device.
 
@@ -38,9 +38,11 @@ Three primary pages with a sidebar (plus mobile drawer) and a header carrying th
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Dashboard: introduction, four genuine statistics, local-data management |
-| `/find-companies` | Live OpenStreetMap company search, results table, website checks, saving, Recent Searches at the bottom |
-| `/saved-leads` | All saved real businesses with contacts, website checks, and CSV export |
+| `/` | Dashboard: introduction, four genuine statistics, Recent Searches |
+| `/find-companies` | Live OpenStreetMap company search, results table, website checks, saving |
+| `/saved-leads` | All saved real businesses with contacts, website checks, CSV export, plus Recent Searches |
+
+Header, main content, and footer share one container (`CONTAINER_CLASS`) so their edges align on every page. The sidebar holds the three destinations plus a Clear-local-data action anchored at the bottom; the header carries the logo and a compact theme switch (track + thumb, no text labels).
 
 There is no Lists or Settings page, no demo data, and no CRM workflow.
 
@@ -50,6 +52,7 @@ There is no Lists or Settings page, no demo data, and no CRM workflow.
 - **Results table:** every result shows a *pitch opportunity* (High: no website, social page only, or a down/outdated site; Medium: site needs work; Low: modern site or a chain brand), all contacts from OSM tags (website, phones, emails, social profiles, address), and an expandable details panel with Google Maps / Google / Facebook research links plus full record and website-check details.
 - **Website checks** run only on request ("Check site" per row / "Check N websites" bulk): each homepage is loaded through the free, keyless Jina Reader (`r.jina.ai`, ~20 requests/min, one at a time; the site address is shared with Jina AI) and analyzed for HTTPS, a responsive viewport, the latest copyright year, platform/CMS version, dated tech, parked/error pages, and missing SEO basics. Emails, phones, and social links found on the site are added to the contact list (tagged "site"). Results are cached in `localStorage` for 14 days and included in the saved-leads CSV export. Signals are heuristics, not proof.
 - Results can be sorted by default provider order or name (A–Z), applied locally.
+- **Recent Searches** (on Dashboard and Saved Leads) share one local history. Clicking an entry navigates to Find Companies with a `run=1` URL parameter, which restores the criteria and triggers exactly one live search, then strips the flag so refreshes never re-run.
 - Searches share results through a 10-minute in-memory cache (50-entry cap) keyed by normalized provider parameters; simultaneous identical searches share one in-flight request. Aborted requests settle silently; failures never poison the cache.
 - Location searches require a city/region; areas over 50,000 km² are refused with guidance to narrow the area.
 - Attribution: © OpenStreetMap contributors, linked in the footer and under results, per provider policy.
@@ -63,7 +66,7 @@ Stored in `localStorage` under versioned `leadscout.*` keys (see `STORAGE_KEYS` 
 - Website-check cache (14 days) and Nominatim geocode cache
 - Theme preference
 
-All data is **browser-local**: it does not sync across devices and is lost if browser storage is cleared. Corrupt entries are dropped by validation rather than crashing pages. Cross-tab updates propagate through storage events. The Dashboard's Local data section clears saved leads, recent searches, and search statistics after confirmation; theme preference and caches are kept.
+All data is **browser-local**: it does not sync across devices and is lost if browser storage is cleared. Corrupt entries are dropped by validation rather than crashing pages. Cross-tab updates propagate through storage events. The sidebar's Clear-local-data action clears saved leads, recent searches, and search statistics after confirmation; theme preference and caches are kept.
 
 ## Dashboard statistics
 
