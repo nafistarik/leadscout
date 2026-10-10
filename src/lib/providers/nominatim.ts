@@ -1,5 +1,5 @@
 import { STORAGE_KEYS, readLocalStorage, safeJsonParse, writeLocalStorage } from "@/lib/storage";
-import { fetchWithTimeout, toProviderError } from "@/lib/providers/http";
+import { fetchWithTimeout, readJsonBody, toProviderError } from "@/lib/providers/http";
 import { ProviderError } from "@/lib/providers/types";
 
 /**
@@ -26,6 +26,8 @@ export interface SearchArea {
 
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
 const GEOCODE_TIMEOUT_MS = 12_000;
+/** Ceiling for bodies that arrive slowly after headers (see readJsonBody). */
+const BODY_TIMEOUT_MS = 15_000;
 const GEOCODE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const GEOCODE_CACHE_LIMIT = 50;
 
@@ -160,7 +162,7 @@ export async function resolveSearchArea(
         `The location service returned an unexpected status (${response.status}). Try again shortly.`,
       );
     }
-    data = (await response.json()) as unknown;
+    data = await readJsonBody(response, { signal: options.signal, timeoutMs: BODY_TIMEOUT_MS });
   } catch (error) {
     throw toProviderError(error, "Could not resolve the location. Check your connection and try again.");
   }

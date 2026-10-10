@@ -89,7 +89,7 @@ CSV (UTF-8 with BOM, RFC 4180 quoting, formula-injection guard, temporary downlo
 - No automated browser (E2E) tests are committed — interaction behavior is covered by unit/integration tests plus CDP-driven browser verification runs (see release checklist).
 - Follow-up "due" states evaluate at render time (no background timers by design).
 - Large result sets are capped for public-API friendliness; exports cover displayed results, not unbounded queries.
-- With browser storage fully disabled, a storage warning renders client-only; the app degrades gracefully but React logs a hydration notice in development (production behavior unaffected).
+- With browser storage fully disabled, a storage warning renders client-only; the app degrades gracefully but React may log a hydration notice in development (production behavior unaffected; verified the main settings counts path is hydration-clean).
 
 ## Release checklist
 
@@ -98,5 +98,6 @@ CSV (UTF-8 with BOM, RFC 4180 quoting, formula-injection guard, temporary downlo
 - [x] `bun test` — 156 pass / 0 fail across 20 files
 - [x] `bun run build` — succeeds, all 5 routes prerender static
 - [x] Browser pass via CDP-driven headless Chrome against the dev server: all 5 routes render with zero app console errors; demo search → save → reload persistence → saved-leads display; list create + add-to-list membership; saved CSV download verified byte-level (header, BOM, saved record); theme toggle persists; live error states with retry; 390px viewport with zero horizontal overflow; back-button restores mode/form/results
-- [x] Live provider check: Nominatim verified (HTTP 200); one full Overpass search verified live in-browser (10 Berlin results, dedupe, scores, attribution, snapshot save). Sandbox egress is intermittent (406 stalls/timeouts) — the app surfaces typed errors with retry in all observed cases
+- [x] Live provider check: Nominatim verified (HTTP 200); full Overpass searches verified live in-browser (Berlin bakeries → 10 deduplicated results; Dhaka dental clinics → 10 real records with names/coords/phones, OSM links, scores, live save + snapshot persistence + scoped CSV export). Sandbox egress is intermittent (406 stalls/timeouts) — the app surfaces typed errors with retry in all observed cases
+- [x] Acceptance re-verification (current build): settings hydration defect fixed and confirmed clean across repeated loads; unsave removes rows; list add/rename-entry/membership verified; back-button restores mode/form/results; invalid location yields fast, correct "Place not found" with no retry trap
 - [ ] Owner deploys: `bun install && bun run build` on Vercel (no env vars to configure), then smoke-tests the deployed URL

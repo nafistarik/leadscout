@@ -1,7 +1,7 @@
 import type { Company } from "@/types/company";
 import type { OsmTagPair } from "@/lib/providers/osm-tags";
 import { normalizeWebsiteUrl } from "@/lib/links";
-import { fetchWithTimeout, toProviderError } from "@/lib/providers/http";
+import { fetchWithTimeout, readJsonBody, toProviderError } from "@/lib/providers/http";
 import { ProviderError } from "@/lib/providers/types";
 import type { SearchArea } from "@/lib/providers/nominatim";
 
@@ -25,6 +25,8 @@ const OVERPASS_ENDPOINTS = [
 ] as const;
 const OVERPASS_TIMEOUT_MS = 30_000;
 const OVERPASS_SERVER_TIMEOUT_S = 25;
+/** Generous ceiling for bodies that arrive slowly after headers (see readJsonBody). */
+const BODY_TIMEOUT_MS = 15_000;
 const MAX_KEYWORD_LENGTH = 40;
 
 export interface OverpassSearchParams {
@@ -281,8 +283,11 @@ async function fetchFromEndpoint(
 
   let data: unknown;
   try {
-    data = (await response.json()) as unknown;
-  } catch {
+    data = await readJsonBody(response, { signal: options.signal, timeoutMs: BODY_TIMEOUT_MS });
+  } catch (error) {
+    // Timeouts already carry their kind; anything else means the payload
+    // could not be parsed (including aborts, which callers handle by signal).
+    if (error instanceof ProviderError) throw error;
     throw new ProviderError("bad-response", "The Overpass API returned data in an unexpected format.");
   }
 

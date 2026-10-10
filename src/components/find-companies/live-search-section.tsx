@@ -25,14 +25,17 @@ import { Field, SelectInput, TextInput } from "@/components/ui/field";
 import {
   ActiveFilterChips,
   AvailabilityCheckbox,
+  HistoryControls,
   PresetControls,
   SORT_LABELS,
   SortSelect,
 } from "@/components/find-companies/refine-controls";
 import type { FilterChip } from "@/components/find-companies/refine-controls";
 import { OsmAttribution } from "@/components/osm-attribution";
-import { DEMO_CATEGORIES, MAX_RESULTS_OPTIONS } from "@/data/demo-leads";
-import { LIVE_COUNTRY_SUGGESTIONS } from "@/data/search-options";
+import { MAX_RESULTS_OPTIONS } from "@/data/demo-leads";
+import { LIVE_CATEGORIES, LIVE_COUNTRY_SUGGESTIONS } from "@/data/search-options";
+import { useSearchHistory } from "@/hooks/use-search-history";
+import type { SearchHistoryEntry } from "@/lib/search-history";
 import { useCompanySearch } from "@/hooks/use-company-search";
 import type { SearchError } from "@/hooks/use-company-search";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
@@ -130,6 +133,7 @@ export function LiveSearchSection({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isCompanySaved, toggleCompany } = useSavedLeads();
+  const { recordSearch } = useSearchHistory();
   const { status, companies, meta, error, submittedFilters, search, retry, reset } =
     useCompanySearch();
 
@@ -164,12 +168,38 @@ export function LiveSearchSection({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const snapshot = { ...filters };
+    submitLiveFilters({ ...filters });
+  }
+
+  function submitLiveFilters(snapshot: LeadSearchFilters) {
+    recordSearch({
+      mode: "live",
+      country: snapshot.country,
+      city: snapshot.city,
+      category: snapshot.category,
+      keyword: snapshot.keyword,
+      maxResults: snapshot.maxResults,
+    });
     router.replace(`/find-companies?${filtersToSearchParams("live", snapshot).toString()}`, {
       scroll: false,
     });
     setWrittenKey(writtenUrlKey(filtersToSearchParams("live", snapshot)));
     search(snapshot);
+  }
+
+  function applyHistory(entry: SearchHistoryEntry) {
+    const next: LeadSearchFilters = {
+      ...filters,
+      country: entry.country,
+      city: entry.city,
+      category: LIVE_CATEGORIES.includes(entry.category) ? entry.category : "all",
+      keyword: entry.keyword,
+      maxResults: (MAX_RESULTS_OPTIONS as readonly number[]).includes(entry.maxResults)
+        ? entry.maxResults
+        : EMPTY_FILTERS.maxResults,
+    };
+    setFilters(next);
+    submitLiveFilters(next);
   }
 
   function handleReset() {
@@ -314,7 +344,7 @@ export function LiveSearchSection({
                 onChange={(event) => update("category", event.target.value)}
               >
                 <option value="all">All businesses</option>
-                {DEMO_CATEGORIES.map((category) => (
+                {LIVE_CATEGORIES.map((category) => (
                   <option key={category} value={category}>
                     {category}
                   </option>
@@ -449,6 +479,7 @@ export function LiveSearchSection({
                 onApplyPreset(presetMode, presetFilters);
               }}
             />
+            <HistoryControls mode="live" onApply={applyHistory} />
           </div>
         </div>
       </details>

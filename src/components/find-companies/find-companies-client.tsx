@@ -8,6 +8,7 @@ import { LiveSearchSection } from "@/components/find-companies/live-search-secti
 import {
   ActiveFilterChips,
   AvailabilityCheckbox,
+  HistoryControls,
   PresetControls,
   SORT_LABELS,
   SortSelect,
@@ -23,6 +24,8 @@ import { OsmAttribution } from "@/components/osm-attribution";
 import { DEMO_CATEGORIES, DEMO_CITIES, DEMO_COUNTRIES, DEMO_LEADS, MAX_RESULTS_OPTIONS } from "@/data/demo-leads";
 import { demoToRow, downloadCsv, exportFilename, rowsToCsv } from "@/lib/csv";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
+import { useSearchHistory } from "@/hooks/use-search-history";
+import type { SearchHistoryEntry } from "@/lib/search-history";
 import {
   EMPTY_FILTERS,
   applyDemoAvailabilityFilters,
@@ -86,6 +89,7 @@ export function FindCompaniesClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isDemoSaved, toggleDemo } = useSavedLeads();
+  const { recordSearch } = useSearchHistory();
 
   // Shareable URL state: restore mode + full form on mount and on later
   // navigations (back button, shared links). Demo submissions may auto-run
@@ -211,12 +215,38 @@ export function FindCompaniesClient() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const snapshot = { ...filters };
+    submitDemoFilters({ ...filters });
+  }
+
+  function submitDemoFilters(snapshot: LeadSearchFilters) {
+    recordSearch({
+      mode: "demo",
+      country: snapshot.country,
+      city: snapshot.city,
+      category: snapshot.category,
+      keyword: snapshot.keyword,
+      maxResults: snapshot.maxResults,
+    });
     router.replace(`/find-companies?${filtersToSearchParams("demo", snapshot).toString()}`, {
       scroll: false,
     });
     setWrittenKey(writtenUrlKey(filtersToSearchParams("demo", snapshot)));
     setSubmitted(snapshot);
+  }
+
+  function applyHistory(entry: SearchHistoryEntry) {
+    const next: LeadSearchFilters = {
+      ...filters,
+      country: entry.country,
+      city: entry.city,
+      category: DEMO_CATEGORIES.includes(entry.category) ? entry.category : "all",
+      keyword: entry.keyword,
+      maxResults: (MAX_RESULTS_OPTIONS as readonly number[]).includes(entry.maxResults)
+        ? entry.maxResults
+        : EMPTY_FILTERS.maxResults,
+    };
+    setFilters(next);
+    submitDemoFilters(next);
   }
 
   function handleReset() {
@@ -421,6 +451,7 @@ export function FindCompaniesClient() {
               </div>
               <div className="border-t border-line-soft pt-4">
                 <PresetControls mode="demo" filters={filters} onApply={applyPreset} />
+                <HistoryControls mode="demo" onApply={applyHistory} />
               </div>
             </div>
           </details>

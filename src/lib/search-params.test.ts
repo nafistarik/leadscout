@@ -57,6 +57,15 @@ describe("searchParamsToFilters", () => {
     expect(searchParamsToFilters(params("mode=demo")).filters.country).toBe("all");
   });
 
+  test("live-only categories survive URL restore", () => {
+    expect(searchParamsToFilters(params("mode=live&category=Coffee%20Shop")).filters.category).toBe(
+      "Coffee Shop",
+    );
+    expect(searchParamsToFilters(params("mode=live&category=Restaurant")).filters.category).toBe(
+      "Restaurant",
+    );
+  });
+
   test("trims and caps free text", () => {
     const restored = searchParamsToFilters(params("city=" + encodeURIComponent("  Berlin  ") + "&keyword=" + "x".repeat(200)));
     expect(restored.filters.city).toBe("Berlin");

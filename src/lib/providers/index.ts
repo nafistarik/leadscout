@@ -24,6 +24,14 @@ import { ProviderError } from "@/lib/providers/types";
 const RESULT_TTL_MS = 10 * 60 * 1000;
 /** Bounds in-memory result growth across long sessions of distinct searches. */
 const RESULT_CACHE_LIMIT = 50;
+/**
+ * Overall deadline for one search (geocode + primary + fallback combined).
+ * Individual legs already time out (12s geocode, 30s Overpass), so this only
+ * cuts off pathological back-to-back stalls — bounded at ~72s otherwise —
+ * instead of leaving the UI spinning. Firing it reports `timeout`, never a
+ * silent hang; the caller can retry manually.
+ */
+const OVERALL_TIMEOUT_MS = 60_000;
 
 const resultCache = new TtlCache<ProviderSearchResult>(RESULT_TTL_MS, RESULT_CACHE_LIMIT);
 const inflight = new InflightDeduper<ProviderSearchResult>();
@@ -56,6 +64,38 @@ async function runSearch(
   options: { signal: AbortSignal },
 ): Promise<ProviderSearchResult> {
   const limit = resultLimit(request.maxResults);
+  // Link the caller's signal to a local controller so the overall deadline
+  // aborts in-flight provider requests instead of leaving them dangling.
+  const controller = new AbortController();
+  const onAbort = (): void => controller.abort();
+  if (options.signal.aborted) controller.abort();
+  else options.signal.addEventListener("abort", onAbort, { once: true });
+  let overallTimedOut = false;
+  const timer = setTimeout(() => {
+    overallTimedOut = true;
+    controller.abort();
+  }, OVERALL_TIMEOUT_MS);
+  try {
+    return await runSearchInner(request, limit, { signal: controller.signal });
+  } catch (error) {
+    if (overallTimedOut) {
+      throw new ProviderError(
+        "timeout",
+        "The overall search took too long and was stopped. Try a smaller area or fewer categories.",
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    options.signal.removeEventListener("abort", onAbort);
+  }
+}
+
+async function runSearchInner(
+  request: ProviderSearchRequest,
+  limit: number,
+  options: { signal: AbortSignal },
+): Promise<ProviderSearchResult> {
   const area = await resolveSearchArea(request.city, request.country, { signal: options.signal });
 
   // Refuse oversized areas before touching Overpass: a capped slice of a

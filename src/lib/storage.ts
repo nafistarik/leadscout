@@ -16,6 +16,8 @@ export const STORAGE_KEYS = {
   searchPresets: "leadscout.searchPresets.v1",
   /** Part 7: user-assigned workflow metadata keyed by saved-lead record id. */
   leadWorkflow: "leadscout.leadWorkflow.v1",
+  /** Search history: recent provider-side search inputs only (no results). */
+  searchHistory: "leadscout.searchHistory.v1",
 } as const;
 
 export function readLocalStorage(key: string): string | null {

@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { BookmarkPlus, Check, Trash2, X } from "lucide-react";
+import { BookmarkPlus, Check, History, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/field";
+import { useSearchHistory } from "@/hooks/use-search-history";
 import { useSearchPresets } from "@/hooks/use-search-presets";
+import { describeHistoryEntry } from "@/lib/search-history";
+import type { SearchHistoryEntry } from "@/lib/search-history";
 import type { LeadSearchFilters, SortOrder } from "@/lib/filter-leads";
 import type { SearchMode } from "@/lib/search-params";
 import { cn } from "@/lib/storage";
@@ -268,6 +271,103 @@ export function PresetControls({
           {feedback}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function formatHistoryDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Compact recent-search list for the current mode. Clicking an entry fills
+ * the form and immediately runs a fresh search (results are never stored,
+ * so re-running is the only honest behavior). Entries can be removed
+ * individually; clearing the whole history asks first.
+ */
+export function HistoryControls({
+  mode,
+  onApply,
+}: {
+  mode: SearchMode;
+  onApply: (entry: SearchHistoryEntry) => void;
+}) {
+  const { history, removeEntry, clearHistory } = useSearchHistory();
+  const [confirmingClear, setConfirmingClear] = useState(false);
+  const items = history.filter((entry) => entry.mode === mode);
+  if (items.length === 0) return null;
+
+  return (
+    <div className="border-t border-line-soft pt-4">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h4 className="flex items-center gap-1.5 text-[13px] font-medium text-ink2">
+          <History className="h-3.5 w-3.5 text-ink3" aria-hidden="true" />
+          Recent searches
+        </h4>
+        {confirmingClear ? (
+          <span className="flex items-center gap-1.5 text-xs">
+            <span className="text-ink2">Clear all?</span>
+            <button
+              type="button"
+              onClick={() => {
+                clearHistory();
+                setConfirmingClear(false);
+              }}
+              className="cursor-pointer font-medium text-status-error-fg hover:underline"
+            >
+              Yes, clear
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingClear(false)}
+              className="cursor-pointer font-medium text-ink2 hover:underline"
+            >
+              Keep
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmingClear(true)}
+            className="cursor-pointer text-xs font-medium text-ink3 hover:text-status-error-fg"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <ul className="space-y-1.5">
+        {items.map((entry) => (
+          <li
+            key={entry.id}
+            className="flex items-center justify-between gap-2 rounded-lg border border-line-soft bg-recessed px-3 py-1.5"
+          >
+            <button
+              type="button"
+              onClick={() => onApply(entry)}
+              title={`Re-run: ${describeHistoryEntry(entry)}`}
+              className="min-w-0 flex-1 cursor-pointer truncate text-left text-[13px] text-ink2 hover:text-ink"
+            >
+              <span className="font-medium">{describeHistoryEntry(entry)}</span>{" "}
+              <span className="text-xs text-ink3">{formatHistoryDate(entry.searchedAt)}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => removeEntry(entry.id)}
+              aria-label={`Remove search ${describeHistoryEntry(entry)} from history`}
+              className="shrink-0 cursor-pointer rounded p-1 text-ink3 hover:text-status-error-fg"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

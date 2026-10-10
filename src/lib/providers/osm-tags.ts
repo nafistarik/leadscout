@@ -26,6 +26,11 @@ const CATEGORY_TAGS: Record<string, OsmTagPair[]> = {
     { key: "leisure", value: "fitness_centre", label: "Yoga / Fitness Studio", approximate: true },
   ],
   Bookstore: [{ key: "shop", value: "books", label: "Bookstore" }],
+  "Coffee Shop": [{ key: "amenity", value: "cafe", label: "Coffee Shop" }],
+  Restaurant: [
+    { key: "amenity", value: "restaurant", label: "Restaurant" },
+    { key: "amenity", value: "fast_food", label: "Fast Food" },
+  ],
   Landscaping: [
     { key: "craft", value: "gardener", label: "Landscaping" },
     { key: "shop", value: "garden_centre", label: "Garden Centre" },
@@ -43,6 +48,9 @@ export const GENERIC_BUSINESS_TAGS: OsmTagPair[] = [
   { key: "shop", value: null, label: "Shop" },
   { key: "office", value: null, label: "Office" },
   { key: "craft", value: null, label: "Craft" },
+  { key: "amenity", value: "restaurant", label: "Restaurant" },
+  { key: "amenity", value: "cafe", label: "Coffee Shop" },
+  { key: "amenity", value: "fast_food", label: "Fast Food" },
 ];
 
 /**

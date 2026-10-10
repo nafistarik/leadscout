@@ -1,4 +1,5 @@
-import { DEMO_CATEGORIES, DEMO_COUNTRIES, MAX_RESULTS_OPTIONS } from "@/data/demo-leads";
+import { DEMO_COUNTRIES, MAX_RESULTS_OPTIONS } from "@/data/demo-leads";
+import { LIVE_CATEGORIES } from "@/data/search-options";
 import { EMPTY_FILTERS } from "@/lib/filter-leads";
 import type { LeadSearchFilters, SortOrder } from "@/lib/filter-leads";
 
@@ -58,7 +59,7 @@ export function searchParamsToFilters(params: URLSearchParams): RestoredSearch {
     filters: {
       country,
       city: cleanText(params.get("city"), 80),
-      category: category === "all" || DEMO_CATEGORIES.includes(category) ? category || "all" : "all",
+      category: category === "all" || LIVE_CATEGORIES.includes(category) ? category || "all" : "all",
       keyword: cleanText(params.get("keyword"), 80),
       maxResults: parseMaxResults(params.get("max")),
       hasWebsite: parseFlag(params.get("web")),

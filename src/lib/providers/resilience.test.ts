@@ -323,4 +323,87 @@ describe("companyProvider.search orchestration (stubbed fetch — no network)", 
     expect((caught as ProviderError).kind).toBe("area-too-large");
     expect(calls).toHaveLength(1); // geocode only
   });
+
+  test("pre-aborted signal aborts before any completed request", async () => {
+    const calls: string[] = [];
+    globals.fetch = (url: string, init?: { signal?: AbortSignal }): Promise<Response> => {
+      calls.push(url);
+      if (init?.signal?.aborted) {
+        return Promise.reject(new DOMException("Aborted", "AbortError"));
+      }
+      return Promise.resolve(jsonResponse([]));
+    };
+    installMemoryStorage();
+    const controller = new AbortController();
+    controller.abort();
+    let caught: unknown = null;
+    try {
+      await companyProvider.search(
+        {
+          country: "Germany",
+          city: "NeverFetched",
+          category: "Bakery",
+          keyword: "",
+          maxResults: 10,
+          hasWebsite: false,
+          hasPhone: false,
+          hasEmail: false,
+          hasOpeningHours: false,
+          minScore: 0,
+          sort: "provider",
+        },
+        { signal: controller.signal },
+      );
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(ProviderError);
+    expect((caught as ProviderError).kind).toBe("timeout");
+    // The in-flight attempt is torn down; nothing reports success.
+    expect(calls.length < 2).toBe(true);
+  });
+
+  test("caller abort mid-flight settles promptly with no success", async () => {
+    // A stub that hangs like a stalled upstream but honors abort, exactly
+    // like a real fetch does.
+    globals.fetch = (_url: string, init?: { signal?: AbortSignal }): Promise<Response> =>
+      new Promise((_, reject) => {
+        if (init?.signal?.aborted) {
+          reject(new DOMException("Aborted", "AbortError"));
+          return;
+        }
+        init?.signal?.addEventListener(
+          "abort",
+          () => reject(new DOMException("Aborted", "AbortError")),
+          { once: true },
+        );
+      });
+    installMemoryStorage();
+    const controller = new AbortController();
+    const pending = companyProvider.search(
+      {
+        country: "Germany",
+        city: "HangingCity",
+        category: "Bakery",
+        keyword: "",
+        maxResults: 10,
+        hasWebsite: false,
+        hasPhone: false,
+        hasEmail: false,
+        hasOpeningHours: false,
+        minScore: 0,
+        sort: "provider",
+      },
+      { signal: controller.signal },
+    );
+    controller.abort();
+    let caught: unknown = null;
+    try {
+      await pending;
+    } catch (error) {
+      caught = error;
+    }
+    // Settles (test would time out otherwise) and never reports success.
+    expect(caught).toBeInstanceOf(ProviderError);
+  });
 });
