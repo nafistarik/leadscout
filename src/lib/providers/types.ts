@@ -15,6 +15,11 @@ export interface ProviderSearchMeta {
   examined: number;
   /** Approximate searched area in km² (null when not computable). */
   areaKm2: number | null;
+  /**
+   * Set when results came from a fallback source with narrower coverage,
+   * explaining what is missing. Null for primary-source results.
+   */
+  coverageNote?: string | null;
 }
 
 export interface ProviderSearchResult {
@@ -29,6 +34,8 @@ export type ProviderErrorKind =
   | "timeout"
   | "rate-limit"
   | "network"
+  /** Upstream public service refused, blocked, or failed the request. */
+  | "unavailable"
   | "bad-response";
 
 export class ProviderError extends Error {

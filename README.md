@@ -10,7 +10,7 @@ There is no backend, no database, no account system, and no paid API. All user d
 - **Styling/UI:** Tailwind CSS v4 with a centralized Neumorphic design-token system (`src/app/globals.css`), Lucide icons
 - **State/persistence:** React client state + versioned `localStorage` envelopes (no sync across devices)
 - **Search providers:** Nominatim (geocoding) + Overpass API (OpenStreetMap business data); deterministic local filtering for demo data
-- **Testing:** `bun test` (20 suites, 156 tests; pure unit/integration tests, no browser harness)
+- **Testing:** `bun test` (22 suites, 181 tests; pure unit/integration tests, no browser harness)
 
 ## Requirements and setup
 
@@ -45,7 +45,7 @@ None. The application uses **no environment variables** — there is no `.env` f
 ## Search workflow
 
 - **Demo mode** filters the built-in 12-record fictional dataset locally. No network requests are made. Every demo record, metric, and activity item is badged as sample data.
-- **Live mode** resolves the entered city/country to a bounding box via Nominatim, then queries the Overpass API (`overpass-api.de`, with `overpass.kumi.systems` as a one-time fallback on transport failures — never on rate limits). Results are normalized, deduplicated, and capped (`maxResults`, server fetch capped at 100).
+- **Live mode** resolves the entered city/country to a bounding box via Nominatim, then queries the Overpass API, trying public instances strictly in sequence (`overpass.private.coffee`, `overpass-api.de`, `overpass.kumi.systems`; at most 4 attempts within a 25 s budget; a 429 stops Overpass immediately). `overpass-api.de` blocks requests from `*.vercel.app`/`*.netlify.app` pages (HTTP 406), so it is skipped there. If every Overpass attempt fails, the search falls back to Nominatim's category search (`q=[amenity=cafe]` in the bounded area; ≤3 requests throttled to 1/s, ≤40 places each, no generic shop/office/craft coverage) and the results show a coverage note. Results are normalized, deduplicated, and capped (`maxResults`, server fetch capped at 100).
 - Refine panel filters (website/phone/email/opening-hours presence, minimum fit score) and sorting apply **client-side to fetched results only** — they never trigger new requests. A "Narrowed locally" indicator and "Showing N of M" counts make this explicit; result sets are never claimed to be exhaustive.
 - Searches share results through a 10-minute in-memory cache (50-entry cap) keyed by normalized provider parameters; simultaneous identical searches share one in-flight request. Aborted requests settle silently; failures never poison the cache.
 - Location searches require a city/region; areas over 50,000 km² are refused with guidance to narrow the area.

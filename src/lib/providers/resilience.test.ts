@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { fetchOverpass } from "@/lib/providers/overpass";
+import { endpointsForHost, fetchOverpass, OVERPASS_ENDPOINTS } from "@/lib/providers/overpass";
 import { companyProvider } from "@/lib/providers/index";
 import { resolveSearchArea } from "@/lib/providers/nominatim";
 import { tagsForCategory } from "@/lib/providers/osm-tags";
@@ -28,11 +28,13 @@ function jsonResponse(payload: unknown, status = 200): Response {
   });
 }
 
+type FetchInit = { signal?: AbortSignal; body?: unknown };
+
 function installFetch(
-  impl: (url: string, init?: { signal?: AbortSignal }) => Promise<Response>,
+  impl: (url: string, init?: FetchInit) => Promise<Response>,
 ): string[] {
   const calls: string[] = [];
-  globals.fetch = (url: string, init?: { signal?: AbortSignal }): Promise<Response> => {
+  globals.fetch = (url: string, init?: FetchInit): Promise<Response> => {
     calls.push(url);
     return impl(url, init);
   };
@@ -95,9 +97,9 @@ describe("fetchOverpass resilience (stubbed fetch — no network)", () => {
     expect(calls).toHaveLength(1);
   });
 
-  test("server errors fall back once and normalize without data loss", async () => {
+  test("server errors fall back to the next instance and normalize without data loss", async () => {
     const calls = installFetch((url: string) => {
-      if (url.startsWith("https://overpass-api.de/")) {
+      if (url === OVERPASS_ENDPOINTS[0]) {
         return Promise.resolve(jsonResponse({}, 500));
       }
       return Promise.resolve(
@@ -151,9 +153,43 @@ describe("fetchOverpass resilience (stubbed fetch — no network)", () => {
     }
     expect(caught).toBeInstanceOf(ProviderError);
     expect((caught as ProviderError).kind).toBe("timeout");
-    // Primary fails instantly on the dead signal; exactly one fallback
-    // attempt follows, then the error surfaces — no storm, no success.
-    expect(calls).toHaveLength(2);
+    // A dead signal stops the failover loop before any request.
+    expect(calls).toHaveLength(0);
+  });
+
+  test("blocked instances (CORS-less errors surface as TypeError) fail over in order via POST", async () => {
+    const bodies: string[] = [];
+    const calls = installFetch((url: string, init?: { signal?: AbortSignal; body?: unknown }) => {
+      bodies.push(String(init?.body ?? ""));
+      if (url !== OVERPASS_ENDPOINTS[1]) return Promise.reject(new TypeError("Failed to fetch"));
+      return Promise.resolve(jsonResponse({ elements: [element(7, "Cafe")] }));
+    });
+    const result = await fetchOverpass(overpassParams(), neverAbort);
+    expect(calls).toEqual([OVERPASS_ENDPOINTS[0], OVERPASS_ENDPOINTS[1]]);
+    expect(bodies[0].startsWith("data=")).toBe(true);
+    expect(result.companies.map((c) => c.id)).toEqual(["osm:node/7"]);
+  });
+
+  test("total failure is bounded and reported as an unavailable service, not a connection problem", async () => {
+    const calls = installFetch(() => Promise.reject(new TypeError("Failed to fetch")));
+    let caught: unknown = null;
+    try {
+      await fetchOverpass(overpassParams(), neverAbort);
+    } catch (error) {
+      caught = error;
+    }
+    expect(calls).toHaveLength(4);
+    expect((caught as ProviderError).kind).toBe("unavailable");
+    expect((caught as ProviderError).message).not.toContain("connection and try");
+  });
+});
+
+describe("endpointsForHost", () => {
+  test("skips overpass-api.de on hosting domains it blocks, keeps it elsewhere", () => {
+    expect(endpointsForHost("leadscout.vercel.app")).not.toContain("https://overpass-api.de/api/interpreter");
+    expect(endpointsForHost("x.netlify.app")).toHaveLength(OVERPASS_ENDPOINTS.length - 1);
+    expect(endpointsForHost("localhost")).toEqual(OVERPASS_ENDPOINTS);
+    expect(endpointsForHost(null)).toEqual(OVERPASS_ENDPOINTS);
   });
 });
 
@@ -405,5 +441,101 @@ describe("companyProvider.search orchestration (stubbed fetch — no network)", 
     }
     // Settles (test would time out otherwise) and never reports success.
     expect(caught).toBeInstanceOf(ProviderError);
+  });
+
+  function cafePlace(id: number, name: string) {
+    return {
+      osm_type: "node",
+      osm_id: id,
+      lat: "48.0",
+      lon: "7.85",
+      name,
+      category: "amenity",
+      type: "cafe",
+      extratags: { website: "example.com", phone: "+49 1" },
+      address: { city: "Testville", country: "Germany" },
+    };
+  }
+
+  function liveRequest(city: string, category: string, keyword = "") {
+    return {
+      country: "Germany",
+      city,
+      category,
+      keyword,
+      maxResults: 10,
+      hasWebsite: false,
+      hasPhone: false,
+      hasEmail: false,
+      hasOpeningHours: false,
+      minScore: 0,
+      sort: "provider" as const,
+    };
+  }
+
+  test("falls back to Nominatim category search when every Overpass instance fails", async () => {
+    const calls: string[] = [];
+    globals.fetch = (url: string): Promise<Response> => {
+      calls.push(url);
+      if (url.includes("q=%5Bamenity%3Dcafe%5D")) {
+        return Promise.resolve(jsonResponse([cafePlace(11, "Bean There"), cafePlace(12, "")]));
+      }
+      if (url.startsWith("https://nominatim.openstreetmap.org/")) {
+        return Promise.resolve(
+          jsonResponse([
+            {
+              boundingbox: ["47.98", "48.02", "7.82", "7.88"],
+              display_name: "Fallbackville, Germany",
+              address: { city: "Fallbackville", country: "Germany" },
+            },
+          ]),
+        );
+      }
+      return Promise.reject(new TypeError("Failed to fetch"));
+    };
+    installMemoryStorage();
+    const result = await companyProvider.search(liveRequest("Fallbackville", "Coffee Shop"), neverAbort);
+    expect(result.meta.providerId).toBe("nominatim");
+    expect(result.meta.coverageNote).toContain("Nominatim backup search");
+    // Unnamed places are dropped exactly like Overpass's ["name"] filter.
+    expect(result.companies.map((c) => c.id)).toEqual(["osm:node/11"]);
+    expect(result.companies[0].website).toBe("https://example.com");
+    expect(result.companies[0].category).toBe("Coffee Shop");
+    // 1 geocode + 4 bounded Overpass attempts + 1 fallback request.
+    expect(calls).toHaveLength(6);
+  });
+
+  test("reports one actionable error when Overpass and the fallback both fail", async () => {
+    const calls: string[] = [];
+    globals.fetch = (url: string): Promise<Response> => {
+      calls.push(url);
+      if (url.includes("&q=Doublefail")) {
+        return Promise.resolve(
+          jsonResponse([
+            {
+              boundingbox: ["47.98", "48.02", "7.82", "7.88"],
+              display_name: "Doublefail, Germany",
+              address: { city: "Doublefail", country: "Germany" },
+            },
+          ]),
+        );
+      }
+      if (url.startsWith("https://nominatim.openstreetmap.org/")) {
+        return Promise.resolve(jsonResponse({}, 503));
+      }
+      return Promise.resolve(jsonResponse({}, 500));
+    };
+    installMemoryStorage();
+    let caught: unknown = null;
+    try {
+      await companyProvider.search(liveRequest("Doublefail", "all"), neverAbort);
+    } catch (error) {
+      caught = error;
+    }
+    expect((caught as ProviderError).kind).toBe("unavailable");
+    expect((caught as ProviderError).message).toContain("Overpass");
+    expect((caught as ProviderError).message).toContain("Nominatim");
+    // The first fallback failure stops the fallback: no request storm.
+    expect(calls.filter((u) => u.includes("bounded=1"))).toHaveLength(1);
   });
 });

@@ -24,11 +24,13 @@ export interface SearchArea {
   country: string | null;
 }
 
-const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
+export const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
 const GEOCODE_TIMEOUT_MS = 12_000;
 /** Ceiling for bodies that arrive slowly after headers (see readJsonBody). */
 const BODY_TIMEOUT_MS = 15_000;
 const GEOCODE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+/** Usage policy allows at most 1 request/second; keep a small margin. */
+const MIN_REQUEST_GAP_MS = 1_100;
 const GEOCODE_CACHE_LIMIT = 50;
 
 interface NominatimResult {
@@ -66,6 +68,34 @@ function writeGeocodeCache(cache: Record<string, CachedGeocode>): void {
   const trimmed: Record<string, CachedGeocode> = {};
   for (const key of keys) trimmed[key] = cache[key];
   writeLocalStorage(STORAGE_KEYS.geocodeCache, JSON.stringify(trimmed));
+}
+
+let lastRequestAt = 0;
+
+/**
+ * Waits until at least MIN_REQUEST_GAP_MS has passed since the previous
+ * Nominatim request from this tab (geocoding and POI fallback share it),
+ * then reserves the slot. Rejects with AbortError if the signal fires.
+ */
+export async function waitForNominatimSlot(signal: AbortSignal): Promise<void> {
+  const waitMs = Math.max(0, lastRequestAt + MIN_REQUEST_GAP_MS - Date.now());
+  lastRequestAt = Date.now() + waitMs;
+  if (waitMs === 0) {
+    if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+    return;
+  }
+  await new Promise<void>((resolve, reject) => {
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, waitMs);
+    if (signal.aborted) onAbort();
+    else signal.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 export function geocodeCacheKey(city: string, country: string): string {
@@ -145,6 +175,7 @@ export async function resolveSearchArea(
 
   let data: unknown;
   try {
+    await waitForNominatimSlot(options.signal);
     const response = await fetchWithTimeout(url, {
       signal: options.signal,
       timeoutMs: GEOCODE_TIMEOUT_MS,
@@ -158,13 +189,13 @@ export async function resolveSearchArea(
     }
     if (!response.ok) {
       throw new ProviderError(
-        "network",
+        "unavailable",
         `The location service returned an unexpected status (${response.status}). Try again shortly.`,
       );
     }
     data = await readJsonBody(response, { signal: options.signal, timeoutMs: BODY_TIMEOUT_MS });
   } catch (error) {
-    throw toProviderError(error, "Could not resolve the location. Check your connection and try again.");
+    throw toProviderError(error, "The OpenStreetMap location service (Nominatim)");
   }
 
   if (!Array.isArray(data) || data.length === 0) {

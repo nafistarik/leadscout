@@ -1,7 +1,9 @@
 import { searchCacheKey, InflightDeduper, TtlCache } from "@/lib/providers/cache";
 import { bboxAreaKm2, formatAreaKm2, MAX_SEARCH_AREA_KM2 } from "@/lib/providers/geo";
 import { resolveSearchArea } from "@/lib/providers/nominatim";
-import { dedupeCompanies, fetchOverpass } from "@/lib/providers/overpass";
+import { fetchNominatimPois } from "@/lib/providers/nominatim-pois";
+import { dedupeCompanies, fetchOverpass, sanitizeKeyword } from "@/lib/providers/overpass";
+import type { OverpassFetchResult, OverpassSearchParams } from "@/lib/providers/overpass";
 import { tagsForCategory } from "@/lib/providers/osm-tags";
 import type {
   CompanyProvider,
@@ -25,13 +27,18 @@ const RESULT_TTL_MS = 10 * 60 * 1000;
 /** Bounds in-memory result growth across long sessions of distinct searches. */
 const RESULT_CACHE_LIMIT = 50;
 /**
- * Overall deadline for one search (geocode + primary + fallback combined).
- * Individual legs already time out (12s geocode, 30s Overpass), so this only
- * cuts off pathological back-to-back stalls — bounded at ~72s otherwise —
- * instead of leaving the UI spinning. Firing it reports `timeout`, never a
- * silent hang; the caller can retry manually.
+ * Overall deadline for one search (geocode + Overpass + Nominatim fallback).
+ * Individual legs already time out, so this only cuts off pathological
+ * back-to-back stalls instead of leaving the UI spinning. Firing it reports
+ * `timeout`, never a silent hang; the caller can retry manually.
  */
 const OVERALL_TIMEOUT_MS = 60_000;
+/**
+ * Budget for all Overpass attempts combined. Most failures are fast (blocked
+ * or 500 in well under a second); this caps slow/hanging instances so the
+ * Nominatim fallback still has time inside the overall deadline.
+ */
+const OVERPASS_PHASE_MS = 25_000;
 
 const resultCache = new TtlCache<ProviderSearchResult>(RESULT_TTL_MS, RESULT_CACHE_LIMIT);
 const inflight = new InflightDeduper<ProviderSearchResult>();
@@ -113,22 +120,81 @@ async function runSearchInner(
 
   const tags = tagsForCategory(request.category);
   const serverLimit = Math.min(limit * 2, 100);
-  const { companies, truncated } = await fetchOverpass(
-    { tags, keyword: request.keyword, area, serverLimit },
-    { signal: options.signal },
-  );
+  const params: OverpassSearchParams = { tags, keyword: request.keyword, area, serverLimit };
 
+  let providerId = "overpass";
+  let coverageNote: string | null = null;
+  let fetched: OverpassFetchResult;
+  try {
+    fetched = await fetchOverpassWithinBudget(params, options.signal);
+  } catch (overpassError) {
+    if (options.signal.aborted) throw overpassError;
+    // Every Overpass instance failed: fall back to Nominatim's category
+    // search, which is far more available but narrower in coverage.
+    try {
+      const fallback = await fetchNominatimPois(params, { signal: options.signal });
+      fetched = fallback;
+      providerId = "nominatim";
+      coverageNote =
+        "The OpenStreetMap business-data servers (Overpass) were unavailable, so these results come from the Nominatim backup search: at most 40 places per category" +
+        (fallback.skippedGenericTags ? ", and general shops, offices and trades are not included" : "") +
+        (sanitizeKeyword(request.keyword) ? ", with the keyword matched only within those places" : "") +
+        ". Retry later for fuller results.";
+    } catch (fallbackError) {
+      if (options.signal.aborted) throw fallbackError;
+      throw combinedFailure(overpassError, fallbackError);
+    }
+  }
+
+  const { companies, truncated } = fetched;
   const unique = dedupeCompanies(companies);
   return {
     companies: unique.slice(0, limit),
     meta: {
-      providerId: "overpass",
+      providerId,
       areaLabel: area.label,
       truncated: truncated || unique.length > limit,
       examined: companies.length,
       areaKm2,
+      coverageNote,
     },
   };
+}
+
+/** Runs fetchOverpass under its own phase deadline linked to the caller. */
+async function fetchOverpassWithinBudget(
+  params: OverpassSearchParams,
+  signal: AbortSignal,
+): Promise<OverpassFetchResult> {
+  const controller = new AbortController();
+  const onAbort = (): void => controller.abort();
+  if (signal.aborted) controller.abort();
+  else signal.addEventListener("abort", onAbort, { once: true });
+  const timer = setTimeout(() => controller.abort(), OVERPASS_PHASE_MS);
+  try {
+    return await fetchOverpass(params, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+    signal.removeEventListener("abort", onAbort);
+  }
+}
+
+/** One actionable error describing both failed sources. */
+function combinedFailure(overpassError: unknown, fallbackError: unknown): ProviderError {
+  const primary = overpassError instanceof ProviderError ? overpassError : null;
+  const backup = fallbackError instanceof ProviderError ? fallbackError : null;
+  // A genuinely offline browser is the one case where the user must act.
+  if (primary?.kind === "network" || backup?.kind === "network") {
+    return (primary?.kind === "network" ? primary : backup) as ProviderError;
+  }
+  const rateLimited = primary?.kind === "rate-limit" || backup?.kind === "rate-limit";
+  return new ProviderError(
+    rateLimited ? "rate-limit" : "unavailable",
+    "The free public OpenStreetMap services did not return business data. " +
+      `Business-data servers (Overpass): ${primary?.message ?? "failed"} ` +
+      `Backup search (Nominatim): ${backup?.message ?? "failed"} ` +
+      "Your location was found, so your connection works — wait a minute and retry.",
+  );
 }
 
 class OverpassCompanyProvider implements CompanyProvider {

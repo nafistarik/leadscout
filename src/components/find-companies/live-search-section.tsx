@@ -73,7 +73,9 @@ function ErrorState({ error, onRetry }: { error: SearchError; onRetry: () => voi
           ? "Service is busy"
           : error.kind === "timeout"
             ? "Search timed out"
-            : "Search failed";
+            : error.kind === "unavailable"
+              ? "Data service unavailable"
+              : "Search failed";
   return (
     <Card>
       <CardBody className="flex flex-col items-center px-6 py-12 text-center">
@@ -578,6 +580,9 @@ export function LiveSearchSection({
                   This list is not exhaustive: it reflects only businesses mapped in OpenStreetMap.
                   Contact details appear only when the source data provides them.
                 </p>
+                {meta.coverageNote ? (
+                  <p className="text-xs leading-relaxed text-status-warning-fg">{meta.coverageNote}</p>
+                ) : null}
                 <OsmAttribution />
               </div>
             </div>

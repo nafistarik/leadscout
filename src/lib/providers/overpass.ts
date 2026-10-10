@@ -19,12 +19,48 @@ import type { SearchArea } from "@/lib/providers/nominatim";
  *   tags` so ways/relations resolve to a point and payloads stay small.
  */
 
-const OVERPASS_ENDPOINTS = [
+/**
+ * Public instances, tried strictly in sequence (never in parallel).
+ *
+ * Measured from a real browser in 2026-10: the private.coffee/kumi.systems
+ * cluster intermittently returns fast 500s, and overpass-api.de is often
+ * overloaded (429/504). Those error pages lack CORS headers, so the browser
+ * only sees a TypeError — moving on to the next instance is the only useful
+ * reaction.
+ */
+export const OVERPASS_ENDPOINTS = [
+  "https://overpass.private.coffee/api/interpreter",
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
 ] as const;
-const OVERPASS_TIMEOUT_MS = 30_000;
-const OVERPASS_SERVER_TIMEOUT_S = 25;
+
+/**
+ * overpass-api.de rejects (HTTP 406) every request whose Referer is on these
+ * shared free-hosting domains — an operator ban, verified 2026-10-11. The
+ * app respects it instead of hiding its Referer: from such a host that
+ * instance is skipped rather than sent requests that are certain to fail.
+ */
+const OVERPASS_DE_BLOCKED_HOST_SUFFIXES = [".vercel.app", ".netlify.app"] as const;
+
+/** Endpoints usable from the given page host (exported for tests). */
+export function endpointsForHost(pageHost: string | null): readonly string[] {
+  const host = pageHost?.toLowerCase() ?? "";
+  if (!OVERPASS_DE_BLOCKED_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix))) {
+    return OVERPASS_ENDPOINTS;
+  }
+  return OVERPASS_ENDPOINTS.filter((endpoint) => !endpoint.startsWith("https://overpass-api.de/"));
+}
+
+function currentPageHost(): string | null {
+  return typeof window !== "undefined" && window.location ? window.location.hostname : null;
+}
+
+/** Upper bound on attempts per search (endpoints are cycled in order). */
+const MAX_ATTEMPTS = 4;
+/** Short pause before re-trying an instance that already failed this search. */
+const REPEAT_ATTEMPT_DELAY_MS = 750;
+const OVERPASS_TIMEOUT_MS = 15_000;
+const OVERPASS_SERVER_TIMEOUT_S = 12;
 /** Generous ceiling for bodies that arrive slowly after headers (see readJsonBody). */
 const BODY_TIMEOUT_MS = 15_000;
 const MAX_KEYWORD_LENGTH = 40;
@@ -247,19 +283,26 @@ function looksLikeTimeout(data: unknown): boolean {
   return typeof remark === "string" && /timed out/i.test(remark);
 }
 
+function hostOf(endpoint: string): string {
+  return new URL(endpoint).host;
+}
+
 async function fetchFromEndpoint(
   endpoint: string,
   query: string,
   params: OverpassSearchParams,
   options: { signal: AbortSignal },
 ): Promise<OverpassFetchResult> {
-  const url = `${endpoint}?data=${encodeURIComponent(query)}`;
-  const response = await fetchWithTimeout(url, {
+  const host = hostOf(endpoint);
+  // POST with a form body is a CORS "simple" request (no preflight) and
+  // is the request shape the Overpass operators ask clients to use.
+  const response = await fetchWithTimeout(endpoint, {
     signal: options.signal,
     timeoutMs: OVERPASS_TIMEOUT_MS,
-    headers: { Accept: "application/json" },
+    method: "POST",
+    body: new URLSearchParams({ data: query }),
   }).catch((error: unknown) => {
-    throw toProviderError(error, "Could not reach the Overpass API. Check your connection and try again.");
+    throw toProviderError(error, `The OpenStreetMap business-data server (${host})`);
   });
 
   if (response.status === 429) {
@@ -270,14 +313,14 @@ async function fetchFromEndpoint(
   }
   if (response.status === 504 || response.status === 502 || response.status === 503) {
     throw new ProviderError(
-      response.status === 504 ? "timeout" : "network",
-      "The Overpass API is overloaded right now. Wait a moment and retry.",
+      response.status === 504 ? "timeout" : "unavailable",
+      `The OpenStreetMap business-data server (${host}) is overloaded right now.`,
     );
   }
   if (!response.ok) {
     throw new ProviderError(
-      "network",
-      `The Overpass API returned an unexpected status (${response.status}). Try again shortly.`,
+      "unavailable",
+      `The OpenStreetMap business-data server (${host}) returned status ${response.status}.`,
     );
   }
 
@@ -311,10 +354,26 @@ async function fetchFromEndpoint(
   return { companies, truncated: elements.length >= params.serverLimit };
 }
 
+function delay(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    if (signal.aborted) onAbort();
+    else signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
 /**
- * Runs the query against the primary endpoint, falling back to a secondary
- * instance once on connection/timeout/server errors — but never on
- * rate-limits (a 429 means back off, not shift load elsewhere).
+ * Runs the query against the public instances in sequence, moving on after
+ * any failure (blocked, server error, timeout, malformed payload) up to
+ * MAX_ATTEMPTS. Stops immediately on a 429 — that means back off, not
+ * shift load elsewhere — and on caller aborts. The last error is thrown.
  */
 export async function fetchOverpass(
   params: OverpassSearchParams,
@@ -325,16 +384,24 @@ export async function fetchOverpass(
     throw new ProviderError("bad-response", "The search area is invalid. Try a different city.");
   }
 
-  try {
-    return await fetchFromEndpoint(OVERPASS_ENDPOINTS[0], query, params, options);
-  } catch (error) {
-    if (
-      error instanceof ProviderError &&
-      (error.kind === "rate-limit" || error.kind === "needs-location" || error.kind === "location-not-found")
-    ) {
-      throw error;
+  const endpoints = endpointsForHost(currentPageHost());
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+    if (options.signal.aborted) break;
+    if (attempt >= endpoints.length) {
+      try {
+        await delay(REPEAT_ATTEMPT_DELAY_MS, options.signal);
+      } catch {
+        break;
+      }
     }
-    // Single fallback attempt for transport-level failures.
-    return await fetchFromEndpoint(OVERPASS_ENDPOINTS[1], query, params, options);
+    const endpoint = endpoints[attempt % endpoints.length];
+    try {
+      return await fetchFromEndpoint(endpoint, query, params, options);
+    } catch (error) {
+      lastError = error;
+      if (error instanceof ProviderError && error.kind === "rate-limit") throw error;
+    }
   }
+  throw toProviderError(lastError ?? new DOMException("Aborted", "AbortError"), "The OpenStreetMap business-data servers");
 }
