@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 /**
  * Required OpenStreetMap attribution for Nominatim/Overpass-powered results.
@@ -29,11 +27,3 @@ export function OsmAttribution({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function OsmSourceBadge() {
-  return (
-    <Badge tone="info">
-      OpenStreetMap
-      <ExternalLink className="h-3 w-3" aria-hidden="true" />
-    </Badge>
-  );
-}

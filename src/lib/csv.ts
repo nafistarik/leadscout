@@ -1,8 +1,4 @@
-import type { DemoLead } from "@/types/lead";
 import type { Company, SavedLeadRecord } from "@/types/company";
-import { LEAD_STATUS_LABELS, NEXT_ACTION_LABELS } from "@/types/workflow";
-import type { LeadWorkflow } from "@/types/workflow";
-import { describeCompleteness, presentDetailsLabel } from "@/lib/completeness";
 import { normalizeWebsiteUrl } from "@/lib/links";
 import { computeOpportunity } from "@/lib/opportunity";
 import { describeOsmDetails, SOCIAL_LABELS } from "@/lib/osm-details";
@@ -10,11 +6,11 @@ import { VERDICT_LABELS, websiteVerdict } from "@/lib/website-analysis";
 import type { WebsiteAnalysis } from "@/lib/website-analysis";
 
 /**
- * CSV export for saved leads and filtered search results. Client-side only:
- * builds a UTF-8 string (with BOM for spreadsheet apps), escapes per
- * RFC 4180, guards against spreadsheet formula injection from untrusted
- * source data, and downloads via a temporary object URL that is revoked
- * afterwards. Nothing is ever sent to an external service.
+ * CSV export for the saved-leads collection. Client-side only: builds a
+ * UTF-8 string (with BOM for spreadsheet apps), escapes per RFC 4180, guards
+ * against spreadsheet formula injection from untrusted source data, and
+ * downloads via a temporary object URL that is revoked afterwards. Nothing
+ * is ever sent to an external service.
  */
 
 export const CSV_COLUMNS = [
@@ -31,12 +27,6 @@ export const CSV_COLUMNS = [
   "Source",
   "Source URL",
   "Saved at",
-  "Fit score",
-  "Available details",
-  "Status",
-  "Next action",
-  "Follow up",
-  "Notes",
   "Pitch opportunity",
   "Opportunity reasons",
   "Address",
@@ -69,15 +59,6 @@ export interface CsvRow {
   source: string;
   sourceUrl: string;
   savedAt: string;
-  /** Heuristic fit score when computed in a search context, else blank. */
-  fitScore: string;
-  /** Present-field names (e.g. "website; phone"), else blank. */
-  availableDetails: string;
-  /** User-assigned workflow metadata; blank when never assigned. */
-  status: string;
-  nextAction: string;
-  followUp: string;
-  notes: string;
   pitchOpportunity: string;
   opportunityReasons: string;
   address: string;
@@ -96,56 +77,33 @@ export interface CsvRow {
   websiteCheckedAt: string;
 }
 
-/** Pitch columns: blank for demo rows and for anything not known. */
-type PitchColumns = Pick<
-  CsvRow,
-  | "pitchOpportunity"
-  | "opportunityReasons"
-  | "address"
-  | "allPhones"
-  | "allEmails"
-  | "socialProfiles"
-  | "websiteStatus"
-  | "websiteIssues"
-  | "https"
-  | "mobileFriendly"
-  | "copyrightYear"
-  | "sitePlatform"
-  | "websiteEmails"
-  | "websitePhones"
-  | "websiteSocials"
-  | "websiteCheckedAt"
->;
-
-export const BLANK_PITCH_COLUMNS: PitchColumns = {
-  pitchOpportunity: "",
-  opportunityReasons: "",
-  address: "",
-  allPhones: "",
-  allEmails: "",
-  socialProfiles: "",
-  websiteStatus: "",
-  websiteIssues: "",
-  https: "",
-  mobileFriendly: "",
-  copyrightYear: "",
-  sitePlatform: "",
-  websiteEmails: "",
-  websitePhones: "",
-  websiteSocials: "",
-  websiteCheckedAt: "",
-};
-
 function yesNo(value: boolean | null): string {
   return value === null ? "" : value ? "yes" : "no";
 }
 
-function pitchColumns(company: Company, analysis: WebsiteAnalysis | null): PitchColumns {
+export function companyToRow(
+  company: Company,
+  savedAt: string,
+  analysis: WebsiteAnalysis | null = null,
+): CsvRow {
   const details = describeOsmDetails(company);
   const opportunity = computeOpportunity(company, details, analysis);
   const socials = (links: { network: keyof typeof SOCIAL_LABELS; url: string }[]): string =>
     links.map((link) => `${SOCIAL_LABELS[link.network]}: ${link.url}`).join("; ");
   return {
+    name: company.name,
+    category: company.category,
+    city: company.city ?? "",
+    country: company.country ?? "",
+    website: normalizeWebsiteUrl(company.website) ?? "",
+    phone: company.phone ?? "",
+    email: company.email ?? "",
+    openingHours: company.openingHours ?? "",
+    latitude: company.lat !== null ? String(company.lat) : "",
+    longitude: company.lon !== null ? String(company.lon) : "",
+    source: company.source,
+    sourceUrl: company.sourceUrl ?? "",
+    savedAt,
     pitchOpportunity: `${opportunity.level} — ${opportunity.label}`,
     opportunityReasons: opportunity.reasons.join(" | "),
     address: details.address ?? "",
@@ -165,17 +123,13 @@ function pitchColumns(company: Company, analysis: WebsiteAnalysis | null): Pitch
   };
 }
 
-/** User workflow columns, shared by company and demo rows. */
-function workflowColumns(workflow?: LeadWorkflow): Pick<CsvRow, "status" | "nextAction" | "followUp" | "notes"> {
-  return {
-    status: workflow?.status ? LEAD_STATUS_LABELS[workflow.status] : "",
-    nextAction:
-      workflow?.nextAction && workflow.nextAction !== "none"
-        ? NEXT_ACTION_LABELS[workflow.nextAction]
-        : "",
-    followUp: workflow?.followUpDate ?? "",
-    notes: workflow?.notes ?? "",
-  };
+export function savedRecordsToRows(
+  records: SavedLeadRecord[],
+  getAnalysis?: (company: Company) => WebsiteAnalysis | null,
+): CsvRow[] {
+  return records.map((record) =>
+    companyToRow(record.company, record.savedAt, getAnalysis?.(record.company) ?? null),
+  );
 }
 
 const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
@@ -192,80 +146,6 @@ function escapeField(value: string): string {
     return `"${guarded.replace(/"/g, '""')}"`;
   }
   return guarded;
-}
-
-export function companyToRow(
-  company: Company,
-  savedAt: string,
-  fitScore: number | null = null,
-  workflow?: LeadWorkflow,
-  analysis: WebsiteAnalysis | null = null,
-): CsvRow {
-  return {
-    name: company.name,
-    category: company.category,
-    city: company.city ?? "",
-    country: company.country ?? "",
-    website: normalizeWebsiteUrl(company.website) ?? "",
-    phone: company.phone ?? "",
-    email: company.email ?? "",
-    openingHours: company.openingHours ?? "",
-    latitude: company.lat !== null ? String(company.lat) : "",
-    longitude: company.lon !== null ? String(company.lon) : "",
-    source: company.source,
-    sourceUrl: company.sourceUrl ?? "",
-    savedAt,
-    fitScore: fitScore === null ? "" : String(fitScore),
-    availableDetails: presentDetailsLabel(describeCompleteness(company)),
-    ...workflowColumns(workflow),
-    ...pitchColumns(company, analysis),
-  };
-}
-
-export function demoToRow(demo: DemoLead, savedAt: string, workflow?: LeadWorkflow): CsvRow {
-  const details: string[] = [];
-  if (demo.websiteAvailable) details.push("website");
-  if (demo.phoneAvailable) details.push("phone");
-  return {
-    name: demo.companyName,
-    category: demo.category,
-    city: demo.city,
-    country: demo.country,
-    website: "",
-    phone: "",
-    email: "",
-    openingHours: "",
-    latitude: "",
-    longitude: "",
-    source: "Demo (sample)",
-    sourceUrl: "",
-    savedAt,
-    fitScore: "",
-    availableDetails: details.join("; "),
-    ...workflowColumns(workflow),
-    ...BLANK_PITCH_COLUMNS,
-  };
-}
-
-export function savedRecordsToRows(
-  records: SavedLeadRecord[],
-  demoById: (demoId: string) => DemoLead | undefined,
-  getWorkflow?: (recordId: string) => LeadWorkflow | undefined,
-  getAnalysis?: (company: Company) => WebsiteAnalysis | null,
-): CsvRow[] {
-  const rows: CsvRow[] = [];
-  for (const record of records) {
-    const workflow = getWorkflow?.(record.id);
-    if (record.kind === "osm") {
-      rows.push(
-        companyToRow(record.company, record.savedAt, null, workflow, getAnalysis?.(record.company) ?? null),
-      );
-    } else {
-      const demo = demoById(record.demoId);
-      if (demo) rows.push(demoToRow(demo, record.savedAt, workflow));
-    }
-  }
-  return rows;
 }
 
 export function rowsToCsv(rows: CsvRow[]): string {
@@ -286,12 +166,6 @@ export function rowsToCsv(rows: CsvRow[]): string {
         row.source,
         row.sourceUrl,
         row.savedAt,
-        row.fitScore,
-        row.availableDetails,
-        row.status,
-        row.nextAction,
-        row.followUp,
-        row.notes,
         row.pitchOpportunity,
         row.opportunityReasons,
         row.address,
@@ -320,11 +194,9 @@ function pad(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-export type ExportScope = "leads" | "search";
-
-export function exportFilename(now: Date = new Date(), scope: ExportScope = "leads"): string {
+export function exportFilename(now: Date = new Date()): string {
   const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
-  return scope === "search" ? `leadscout-search-${stamp}.csv` : `leadscout-leads-${stamp}.csv`;
+  return `leadscout-leads-${stamp}.csv`;
 }
 
 /** Triggers a client-side download; revokes the object URL afterwards. */

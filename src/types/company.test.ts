@@ -1,20 +1,29 @@
 import { describe, expect, test } from "bun:test";
-import { DEMO_LEADS } from "@/data/demo-leads";
-import {
-  isCompanyRecordId,
-  isDemoRecordId,
-  toDemoRecordId,
-} from "@/types/company";
+import { companyRecord } from "@/types/company";
 
-describe("saved-lead id namespaces", () => {
-  test("demo and provider namespaces never overlap", () => {
-    for (const lead of DEMO_LEADS) {
-      expect(isCompanyRecordId(lead.id)).toBe(false);
-      expect(isCompanyRecordId(toDemoRecordId(lead.id))).toBe(false);
-      expect(isDemoRecordId(toDemoRecordId(lead.id))).toBe(true);
-    }
-    expect(isCompanyRecordId("osm:node/123")).toBe(true);
-    expect(isDemoRecordId("osm:node/123")).toBe(false);
-    expect(isDemoRecordId("demo-01")).toBe(false);
+describe("companyRecord", () => {
+  test("builds a saved-lead snapshot keyed by the company id", () => {
+    const company = {
+      id: "osm:node/123",
+      provenance: "osm" as const,
+      name: "Real Co",
+      category: "Bakery",
+      city: "Berlin",
+      country: "Germany",
+      locationLabel: "Berlin, Germany",
+      lat: 52.5,
+      lon: 13.4,
+      website: null,
+      phone: null,
+      email: null,
+      openingHours: null,
+      source: "OpenStreetMap",
+      sourceUrl: null,
+      tags: { name: "Real Co" },
+    };
+    const record = companyRecord(company, "2026-01-01T00:00:00.000Z");
+    expect(record.id).toBe("osm:node/123");
+    expect(record.savedAt).toBe("2026-01-01T00:00:00.000Z");
+    expect(record.company).toBe(company);
   });
 });

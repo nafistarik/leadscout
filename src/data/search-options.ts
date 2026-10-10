@@ -1,9 +1,12 @@
-import { DEMO_CATEGORIES } from "@/data/demo-leads";
-
 /**
- * Country suggestions for live search. Free text is accepted — this list only
- * seeds the datalist so users get fast, correctly spelled options.
- */export const LIVE_COUNTRY_SUGGESTIONS: string[] = [
+ * Fixed option lists for live company search. Free text is still accepted
+ * for country and city — these lists only seed datalist suggestions and the
+ * category select so users get fast, correctly spelled options.
+ */
+
+export const MAX_RESULTS_OPTIONS = [5, 10, 25, 50] as const;
+
+export const LIVE_COUNTRY_SUGGESTIONS: string[] = [
   "Germany",
   "United States",
   "United Kingdom",
@@ -36,11 +39,20 @@ import { DEMO_CATEGORIES } from "@/data/demo-leads";
   "Singapore",
 ];
 
-/**
- * Categories offered by live search: every demo category plus live-only
- * categories that have OSM tag mappings but no fictional demo records.
- * Demo mode keeps using DEMO_CATEGORIES so sample data stays fixed.
- */
-export const LIVE_ONLY_CATEGORIES: readonly string[] = ["Coffee Shop", "Restaurant"];
-
-export const LIVE_CATEGORIES: string[] = [...DEMO_CATEGORIES, ...LIVE_ONLY_CATEGORIES].sort();
+/** Business categories with OpenStreetMap tag mappings (see osm-tags). */
+export const LIVE_CATEGORIES: string[] = [
+  "Bakery",
+  "Bicycle Shop",
+  "Bookstore",
+  "Coffee Roaster",
+  "Coffee Shop",
+  "Coworking Space",
+  "Dental Clinic",
+  "Florist",
+  "Interior Design",
+  "Landscaping",
+  "Physiotherapy",
+  "Plumber",
+  "Restaurant",
+  "Yoga Studio",
+];

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Header, MobileNavCloseButton } from "@/components/layout/header";
 import { SidebarContent } from "@/components/layout/sidebar";
+import { OsmAttribution } from "@/components/osm-attribution";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -13,7 +14,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // Close the mobile drawer on navigation. This render-phase update is the
   // documented pattern for adjusting state when a value changes, and it keeps
-  // the drawer in sync for programmatic navigation (e.g. header search).
+  // the drawer in sync for programmatic navigation.
   if (dismissedFor !== pathname) {
     setDismissedFor(pathname);
     setMobileOpen(false);
@@ -65,10 +66,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
         <footer className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6 lg:px-8">
-          <p className="border-t border-line-soft pt-4 text-xs text-ink3">
-            LeadScout — sample records are fictional and labeled as demo data. Live results
-            come from OpenStreetMap contributors (© OpenStreetMap) and vary by mapped coverage.
-          </p>
+          <div className="border-t border-line-soft pt-4">
+            <OsmAttribution />
+          </div>
         </footer>
       </div>
     </div>

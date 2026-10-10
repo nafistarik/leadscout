@@ -2,21 +2,14 @@ export function cn(...classes: Array<string | false | null | undefined>): string
   return classes.filter(Boolean).join(" ");
 }
 
-/** Storage keys used by the prototype. Centralized so Part 2 can migrate them. */
+/** Storage keys used by the app. All local-only; there is no backend. */
 export const STORAGE_KEYS = {
-  /** Part 1: array of demo ids (string[]). Kept for migration; v2 is canonical. */
-  savedLeads: "leadscout.savedLeadIds.v1",
-  /** Part 2: versioned envelope of saved-lead records (demo + real). */
+  /** Versioned envelope of saved real-company snapshots. */
   savedLeadsV2: "leadscout.savedLeads.v2",
-  lists: "leadscout.lists.v1",
   theme: "leadscout.theme.v1",
   /** Nominatim geocode cache (query key -> area + timestamp). */
   geocodeCache: "leadscout.geocodeCache.v1",
-  /** Part 4: named search presets (non-sensitive criteria only). */
-  searchPresets: "leadscout.searchPresets.v1",
-  /** Part 7: user-assigned workflow metadata keyed by saved-lead record id. */
-  leadWorkflow: "leadscout.leadWorkflow.v1",
-  /** Search history: recent provider-side search inputs only (no results). */
+  /** Search history: recent submitted search criteria only (no results). */
   searchHistory: "leadscout.searchHistory.v1",
   /** Website check results keyed by normalized site address. */
   websiteAnalysis: "leadscout.websiteAnalysis.v1",

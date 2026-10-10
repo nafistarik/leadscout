@@ -1,14 +1,13 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/storage";
 
-type BadgeTone = "neutral" | "info" | "success" | "warning" | "demo";
+type BadgeTone = "neutral" | "info" | "success" | "warning";
 
 const TONE_STYLES: Record<BadgeTone, string> = {
   neutral: "bg-recessed text-ink2 ring-line",
   info: "bg-status-info-bg text-status-info-fg ring-status-info-line",
   success: "bg-status-success-bg text-status-success-fg ring-status-success-line",
   warning: "bg-status-warning-bg text-status-warning-fg ring-status-warning-line",
-  demo: "bg-status-demo-bg text-status-demo-fg ring-status-demo-line",
 };
 
 export function Badge({
@@ -36,6 +35,3 @@ export function Badge({
   );
 }
 
-export function DemoBadge({ label = "Demo data" }: { label?: string }) {
-  return <Badge tone="demo">{label}</Badge>;
-}

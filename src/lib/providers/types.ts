@@ -5,7 +5,7 @@ import type { LeadSearchFilters } from "@/lib/filter-leads";
 export type ProviderSearchRequest = LeadSearchFilters;
 
 export interface ProviderSearchMeta {
-  /** Which provider produced these results ("overpass" / "demo"). */
+  /** Which provider produced these results ("overpass" / "nominatim"). */
   providerId: string;
   /** Human-readable area that was actually searched, e.g. "Berlin, Germany". */
   areaLabel: string;

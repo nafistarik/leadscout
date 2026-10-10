@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { DEMO_CATEGORIES } from "@/data/demo-leads";
 import { LIVE_CATEGORIES } from "@/data/search-options";
 import { GENERIC_BUSINESS_TAGS, hasExactTagMapping, tagsForCategory } from "@/lib/providers/osm-tags";
 
 describe("tagsForCategory", () => {
-  test("every demo category resolves to at least one tag pair", () => {
-    for (const category of DEMO_CATEGORIES) {
+  test("every live category resolves to at least one tag pair", () => {
+    for (const category of LIVE_CATEGORIES) {
       expect(tagsForCategory(category).length).toBeGreaterThan(0);
     }
   });

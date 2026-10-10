@@ -33,34 +33,16 @@ export interface Company {
   tags: Record<string, string>;
 }
 
-/** Namespaced id for a fictional demo record inside saved stores and lists. */
-export function toDemoRecordId(demoId: string): string {
-  return `demo:${demoId}`;
-}
-
-/** True for real provider records (currently all "osm:…" ids). */
-export function isCompanyRecordId(id: string): boolean {
-  return id.startsWith("osm:");
-}
-
-/** True for namespaced demo records ("demo:…"). Legacy raw demo ids omitted. */
-export function isDemoRecordId(id: string): boolean {
-  return id.startsWith("demo:");
-}
-
 /**
- * A single saved lead. Demo records reference the built-in dataset by id;
- * real records embed a snapshot of the normalized company so they survive
- * refreshes without re-querying the provider.
+ * A single saved lead: a snapshot of a real company record, so saved leads
+ * survive refreshes without re-querying the provider.
  */
-export type SavedLeadRecord =
-  | { id: string; kind: "demo"; savedAt: string; demoId: string }
-  | { id: string; kind: "osm"; savedAt: string; company: Company };
-
-export function demoRecord(demoId: string, savedAt: string): SavedLeadRecord {
-  return { id: toDemoRecordId(demoId), kind: "demo", savedAt, demoId };
+export interface SavedLeadRecord {
+  id: string;
+  savedAt: string;
+  company: Company;
 }
 
 export function companyRecord(company: Company, savedAt: string): SavedLeadRecord {
-  return { id: company.id, kind: "osm", savedAt, company };
+  return { id: company.id, savedAt, company };
 }

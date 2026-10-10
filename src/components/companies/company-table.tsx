@@ -1,10 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import type { ReactNode } from "react";
 import { Building2, ChevronDown, MapPin } from "lucide-react";
-import { ScoreBadge } from "@/components/companies/score-badge";
-import { CompletenessMeter } from "@/components/companies/completeness-meter";
 import {
   ContactList,
   LeadDetailsPanel,
@@ -16,7 +13,6 @@ import { useWebsiteChecks } from "@/hooks/use-website-analysis";
 import type { WebsiteChecks } from "@/hooks/use-website-analysis";
 import { computeOpportunity } from "@/lib/opportunity";
 import { describeOsmDetails } from "@/lib/osm-details";
-import type { LeadScore } from "@/lib/scoring";
 import { cn } from "@/lib/storage";
 import type { Company } from "@/types/company";
 
@@ -24,10 +20,6 @@ interface CompanyTableProps {
   companies: Company[];
   isSaved: (companyId: string) => boolean;
   onToggleSaved: (company: Company) => void;
-  /** When provided, a heuristic info-fit score is shown under each name. */
-  getScore?: (company: Company) => LeadScore;
-  /** Extra per-row actions (e.g. add-to-list on the Saved Leads page). */
-  extraActions?: (company: Company) => ReactNode;
   caption?: string;
 }
 
@@ -60,15 +52,12 @@ const HEADER_CLASS = "px-4 py-3 text-xs font-semibold uppercase tracking-wide te
 /**
  * Responsive pitch-research table for real company records: table on
  * desktop, cards on mobile. Shows the pitch opportunity, every known
- * contact (OpenStreetMap first, website-discovered extras tagged "site"),
- * an on-demand website check, and an expandable details panel.
+ * contact, an on-demand website check, and an expandable details panel.
  */
 export function CompanyTable({
   companies,
   isSaved,
   onToggleSaved,
-  getScore,
-  extraActions,
   caption,
 }: CompanyTableProps) {
   const checks = useWebsiteChecks();
@@ -87,12 +76,12 @@ export function CompanyTable({
     <div>
       {/* Desktop table */}
       <div className="hidden overflow-x-auto rounded-xl border border-line-soft bg-raised md:block">
-        <table className="w-full min-w-[960px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[880px] border-collapse text-left text-sm">
           {caption ? <caption className="sr-only">{caption}</caption> : null}
           <thead>
             <tr className="border-b border-line">
               <th scope="col" className={cn(HEADER_CLASS, "px-5")}>Company</th>
-              <th scope="col" className={HEADER_CLASS}>Pitch opportunity</th>
+              <th scope="col" className={HEADER_CLASS}>Opportunity</th>
               <th scope="col" className={HEADER_CLASS}>Contact</th>
               <th scope="col" className={HEADER_CLASS}>Website</th>
               <th scope="col" className={cn(HEADER_CLASS, "text-right")}>Action</th>
@@ -125,11 +114,6 @@ export function CompanyTable({
                               {details.address ?? company.locationLabel}
                             </span>
                           </span>
-                          {getScore ? (
-                            <span className="mt-1.5 block">
-                              <ScoreBadge score={getScore(company)} />
-                            </span>
-                          ) : null}
                         </span>
                       </div>
                     </td>
@@ -138,7 +122,6 @@ export function CompanyTable({
                     </td>
                     <td className="max-w-64 px-4 py-3.5">
                       <ContactList company={company} details={details} analysis={analysis} />
-                      <CompletenessMeter company={company} />
                     </td>
                     <td className="px-4 py-3.5">
                       <WebsiteCheckCell
@@ -156,7 +139,6 @@ export function CompanyTable({
                           onToggle={() => onToggleSaved(company)}
                           companyName={company.name}
                         />
-                        {extraActions ? extraActions(company) : null}
                         <DetailsToggle open={open} onToggle={() => toggle(company.id)} name={company.name} />
                       </div>
                     </td>
@@ -216,7 +198,6 @@ export function CompanyTable({
                     onCheck={() => site && checks.check(site)}
                     onRecheck={() => site && checks.recheck(site)}
                   />
-                  {getScore ? <ScoreBadge score={getScore(company)} /> : null}
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <SaveLeadButton
@@ -224,7 +205,6 @@ export function CompanyTable({
                     onToggle={() => onToggleSaved(company)}
                     companyName={company.name}
                   />
-                  {extraActions ? extraActions(company) : null}
                   <DetailsToggle open={open} onToggle={() => toggle(company.id)} name={company.name} />
                 </div>
                 {open ? (

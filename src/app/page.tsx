@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import DashboardClient from "@/components/dashboard/dashboard-client";
+import { DashboardClient } from "@/components/dashboard/dashboard-client";
 
 export const metadata: Metadata = {
   title: "Dashboard",
-  description: "LeadScout demo dashboard with sample companies, saved leads, and lists.",
+  description: "LeadScout dashboard with genuine search statistics, saved leads, and local-data management.",
 };
 
 export default function DashboardPage() {

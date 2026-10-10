@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
-import SavedLeadsClient from "@/components/saved-leads/saved-leads-client";
+import { SavedLeadsSection } from "@/components/saved-leads/saved-leads-section";
 
 export const metadata: Metadata = {
   title: "Saved Leads",
-  description: "Review demo leads saved locally in your browser.",
+  description: "Review businesses saved locally in your browser.",
 };
 
 export default function SavedLeadsPage() {
-  return <SavedLeadsClient />;
+  return (
+    <div className="space-y-4">
+      <p className="max-w-3xl text-sm leading-relaxed text-ink2">
+        Businesses you saved from search results, with their contact details and website checks.
+        Saved leads stay in this browser after a refresh.
+      </p>
+      <SavedLeadsSection />
+    </div>
+  );
 }

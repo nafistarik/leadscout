@@ -180,6 +180,10 @@ body {
   -webkit-font-smoothing: antialiased;
   background-color: var(--surface-app);
   color: var(--text-primary);
+  /* Smooth, consistent light/dark theme transition (disabled under reduced-motion above) */
+  transition:
+    background-color var(--duration-base) var(--ease-out),
+    color var(--duration-base) var(--ease-out);
 }
 
 /* Consistent, always-visible keyboard focus (single mechanism app-wide) */

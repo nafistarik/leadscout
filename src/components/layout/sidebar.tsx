@@ -2,15 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bookmark, LayoutDashboard, ListChecks, Search, Settings, Telescope } from "lucide-react";
+import { Bookmark, LayoutDashboard, Search, Telescope } from "lucide-react";
 import { cn } from "@/lib/storage";
 
 export const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/find-companies", label: "Find Companies", icon: Search },
   { href: "/saved-leads", label: "Saved Leads", icon: Bookmark },
-  { href: "/lists", label: "Lists", icon: ListChecks },
-  { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
@@ -69,11 +67,6 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           })}
         </ul>
       </nav>
-
-      <div className="mt-6 rounded-lg border border-line-soft bg-raised p-3 text-xs leading-relaxed text-ink2">
-        <p className="font-semibold text-ink">Local-first app</p>
-        <p className="mt-1">Live OpenStreetMap search + labeled samples. Saves stay in this browser.</p>
-      </div>
     </div>
   );
 }

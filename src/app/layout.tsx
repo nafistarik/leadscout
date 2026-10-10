@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: "%s · LeadScout",
   },
   description:
-    "LeadScout helps freelance web developers discover potential business clients via OpenStreetMap live search and labeled demo data.",
+    "LeadScout helps freelance web developers discover real local businesses that may need a website, using OpenStreetMap data.",
 };
 
 function ThemeInitScript() {

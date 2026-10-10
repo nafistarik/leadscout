@@ -1,22 +1,55 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import type { FormEvent } from "react";
-import { Menu, Moon, Search, Sun, User, X } from "lucide-react";
-import { DemoBadge } from "@/components/ui/badge";
+import { Menu, Moon, Sun, X } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
+import { cn } from "@/lib/storage";
 
 const TITLES: Record<string, { title: string; trail: string }> = {
   "/": { title: "Dashboard", trail: "Home / Dashboard" },
   "/find-companies": { title: "Find Companies", trail: "Home / Find Companies" },
   "/saved-leads": { title: "Saved Leads", trail: "Home / Saved Leads" },
-  "/lists": { title: "Lists", trail: "Home / Lists" },
-  "/settings": { title: "Settings", trail: "Home / Settings" },
 };
 
-const SEARCH_INPUT_STYLES =
-  "neu-recessed h-10 w-full rounded-lg border border-line-soft bg-recessed pl-9 pr-3 text-sm text-ink placeholder:text-ink3";
+function ThemeSwitch() {
+  const { theme, toggleTheme } = useTheme();
+  const dark = theme === "dark";
+
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <span aria-hidden="true" className="hidden text-[13px] font-medium text-ink2 sm:inline">
+        {dark ? "Dark" : "Light"}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={dark}
+        aria-label={`Color theme, currently ${dark ? "dark" : "light"}. Activate to switch to ${dark ? "light" : "dark"}.`}
+        title={dark ? "Switch to light theme" : "Switch to dark theme"}
+        onClick={toggleTheme}
+        className="neu-recessed relative h-8 w-[60px] shrink-0 cursor-pointer rounded-full border border-line-soft bg-recessed"
+      >
+        <Sun
+          aria-hidden="true"
+          className="absolute left-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink3"
+        />
+        <Moon
+          aria-hidden="true"
+          className="absolute right-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink3"
+        />
+        <span
+          aria-hidden="true"
+          className={cn(
+            "neu-raised-sm absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-raised text-accent-ink",
+            "transition-transform [transition-duration:var(--duration-base)] [transition-timing-function:var(--ease-out)]",
+            dark ? "translate-x-8" : "translate-x-1",
+          )}
+        >
+          {dark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+        </span>
+      </button>
+    </div>
+  );
+}
 
 export function Header({
   pathname,
@@ -25,16 +58,7 @@ export function Header({
   pathname: string;
   onOpenMobileNav: () => void;
 }) {
-  const router = useRouter();
-  const { toggleTheme } = useTheme();
-  const [query, setQuery] = useState("");
   const meta = TITLES[pathname] ?? { title: "LeadScout", trail: "Home" };
-
-  function handleSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const trimmed = query.trim();
-    router.push(trimmed ? `/find-companies?keyword=${encodeURIComponent(trimmed)}` : "/find-companies");
-  }
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-app/95 backdrop-blur">
@@ -55,69 +79,7 @@ export function Header({
           </h1>
         </div>
 
-        <form onSubmit={handleSearch} role="search" className="relative hidden w-64 shrink-0 lg:block">
-          <label htmlFor="global-search" className="sr-only">
-            Search companies
-          </label>
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink3"
-            aria-hidden="true"
-          />
-          <input
-            id="global-search"
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search companies…"
-            className={SEARCH_INPUT_STYLES}
-          />
-        </form>
-
-        <span className="hidden sm:inline-flex">
-          <DemoBadge />
-        </span>
-
-        <button
-          type="button"
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-          title="Toggle theme"
-          className="neu-raised-sm neu-pressable inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line-soft bg-raised text-ink2"
-        >
-          {/* Both icons render; CSS picks the visible one so server and client HTML match. */}
-          <Sun className="h-5 w-5 dark:hidden" aria-hidden="true" />
-          <Moon className="hidden h-5 w-5 dark:block" aria-hidden="true" />
-        </button>
-
-        <span
-          className="neu-recessed flex h-10 w-10 items-center justify-center rounded-full bg-recessed text-ink2"
-          role="img"
-          aria-label="Local workspace, no account signed in"
-          title="Local prototype — no account"
-        >
-          <User className="h-5 w-5" aria-hidden="true" />
-        </span>
-      </div>
-
-      {/* Mobile search row */}
-      <div className="border-t border-line-soft px-4 py-2 lg:hidden">
-        <form onSubmit={handleSearch} role="search" className="relative">
-          <label htmlFor="global-search-mobile" className="sr-only">
-            Search companies
-          </label>
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink3"
-            aria-hidden="true"
-          />
-          <input
-            id="global-search-mobile"
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search companies…"
-            className={SEARCH_INPUT_STYLES}
-          />
-        </form>
+        <ThemeSwitch />
       </div>
     </header>
   );
