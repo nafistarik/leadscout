@@ -39,7 +39,7 @@ function DetailsToggle({ open, onToggle, name }: { open: boolean; onToggle: () =
       onClick={onToggle}
       aria-expanded={open}
       aria-label={`${open ? "Hide" : "Show"} details for ${name}`}
-      className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-accent-ink underline-offset-2 hover:underline"
+      className="inline-flex cursor-pointer items-center gap-1 rounded px-1 py-1 text-xs font-medium text-accent-ink underline-offset-2 hover:underline"
     >
       {open ? "Hide details" : "Details"}
       <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden="true" />
@@ -75,7 +75,7 @@ export function CompanyTable({
   return (
     <div>
       {/* Desktop table */}
-      <div className="hidden overflow-x-auto rounded-xl border border-line-soft bg-raised md:block">
+      <div className="neu-raised hidden overflow-x-auto rounded-xl border border-line-soft bg-raised md:block">
         <table className="w-full min-w-[880px] border-collapse text-left text-sm">
           {caption ? <caption className="sr-only">{caption}</caption> : null}
           <thead>
@@ -146,7 +146,7 @@ export function CompanyTable({
                   {open ? (
                     <tr className="border-b border-line-soft bg-recessed last:border-0">
                       <td colSpan={5} className="px-5 pb-5 pt-1">
-                        <div className="rounded-lg border border-line-soft bg-raised p-4">
+                        <div className="neu-raised-sm rounded-lg border border-line-soft bg-raised p-4">
                           <LeadDetailsPanel
                             company={company}
                             details={details}
@@ -172,7 +172,7 @@ export function CompanyTable({
           const { details, site, state, analysis, opportunity } = rowInsights(company, checks);
           return (
             <li key={company.id}>
-              <div className="rounded-xl border border-line-soft bg-raised p-4">
+              <div className="neu-raised-sm rounded-xl border border-line-soft bg-raised p-4">
                 <div className="flex items-start gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-ink">
                     <Building2 className="h-4 w-4" aria-hidden="true" />

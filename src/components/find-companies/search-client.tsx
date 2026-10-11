@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
+  ChevronDown,
   Loader2,
   MapPin,
   RotateCcw,
@@ -321,15 +322,21 @@ export function SearchClient() {
                     <label htmlFor="results-sort" className="sr-only">
                       Sort results
                     </label>
-                    <select
-                      id="results-sort"
-                      value={sort}
-                      onChange={(event) => setSort(event.target.value as SortOrder)}
-                      className="neu-recessed h-9 cursor-pointer rounded-lg border border-line-soft bg-recessed px-2 text-[13px] text-ink"
-                    >
-                      <option value="provider">Default order</option>
-                      <option value="name">Name (A–Z)</option>
-                    </select>
+                    <span className="relative inline-block">
+                      <select
+                        id="results-sort"
+                        value={sort}
+                        onChange={(event) => setSort(event.target.value as SortOrder)}
+                        className="neu-recessed h-9 cursor-pointer appearance-none rounded-lg border border-line-soft bg-recessed pl-2 pr-8 text-[13px] text-ink transition-[box-shadow,background-color,border-color] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <option value="provider">Default order</option>
+                        <option value="name">Name (A–Z)</option>
+                      </select>
+                      <ChevronDown
+                        aria-hidden="true"
+                        className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink3"
+                      />
+                    </span>
                     {busy ? (
                       <>
                         <span className="inline-flex items-center gap-1.5 text-xs text-ink2" role="status">

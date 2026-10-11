@@ -63,7 +63,7 @@ export function RecentSearchesSection() {
         {history.map((entry) => (
           <li
             key={entry.id}
-            className="flex items-center justify-between gap-2 rounded-lg border border-line-soft bg-raised px-3 py-1.5"
+            className="neu-raised-sm flex items-center justify-between gap-2 rounded-lg border border-line-soft bg-raised px-3 py-1.5 transition-colors hover:bg-alt"
           >
             <button
               type="button"
@@ -81,7 +81,7 @@ export function RecentSearchesSection() {
               type="button"
               onClick={() => removeEntry(entry.id)}
               aria-label={`Remove search ${describeHistoryEntry(entry)} from history`}
-              className="shrink-0 cursor-pointer rounded p-1 text-ink3 hover:text-status-error-fg"
+              className="shrink-0 cursor-pointer rounded-md p-1.5 text-ink3 transition-colors hover:bg-recessed hover:text-status-error-fg"
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>

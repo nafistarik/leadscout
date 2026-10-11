@@ -15,7 +15,7 @@ const VARIANT_STYLES: Record<ButtonVariant, string> = {
     "neu-raised-sm neu-pressable border-transparent bg-accent text-on-accent hover:bg-accent-hover active:bg-accent-pressed",
   secondary:
     "neu-raised-sm neu-pressable border-line-soft bg-raised text-ink hover:bg-alt",
-  ghost: "border-transparent text-ink2 hover:bg-recessed",
+  ghost: "border-transparent text-ink2 hover:bg-recessed hover:text-ink",
   danger:
     "neu-raised-sm neu-pressable border-status-error-line bg-status-error-bg text-status-error-fg hover:brightness-95 dark:hover:brightness-125",
 };

@@ -48,11 +48,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       {mobileOpen ? (
         <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Navigation menu">
           <div
-            className="absolute inset-0 bg-zinc-950/40"
+            className="absolute inset-0 bg-[var(--scrim)]"
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
-          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line bg-alt px-4 py-5">
+          <div className="neu-float absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line bg-alt px-4 py-5">
             <div className="mb-4 flex justify-end">
               <MobileNavCloseButton onClose={() => setMobileOpen(false)} />
             </div>

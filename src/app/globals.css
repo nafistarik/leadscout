@@ -22,6 +22,7 @@
   --surface-raised: #eef3f9;
   --surface-recessed: #e2e9f3;
   --surface-overlay: #f4f8fc;
+  --scrim: rgba(23, 38, 59, 0.4);
 
   /* Text — muted deepened to hold AA on light surfaces */
   --text-primary: #17263b;
@@ -89,6 +90,7 @@ html.dark {
   --surface-raised: #1c2635;
   --surface-recessed: #141b27;
   --surface-overlay: #223046;
+  --scrim: rgba(2, 6, 14, 0.6);
 
   --text-primary: #e6edf7;
   --text-secondary: #a5b3c6;
@@ -193,6 +195,18 @@ body {
   border-radius: 4px;
 }
 
+::selection {
+  background-color: var(--accent-soft);
+}
+
+/* Native <option> list inherits the overlay surface in both themes.
+ * Browsers render the open dropdown natively, so background + color are
+ * the only reliable hooks — padding, radius, and shadows are OS-controlled. */
+select option {
+  background-color: var(--surface-overlay);
+  color: var(--text-primary);
+}
+
 /* ---------------- Elevation utilities (token-driven) ---------------- */
 
 /* Elevation utilities set shadow only and compose with background token
@@ -212,6 +226,11 @@ body {
 /* Recessed: inputs, filter controls, segmented tracks, pressed state */
 .neu-recessed {
   box-shadow: var(--shadow-inset);
+}
+
+/* Float: mobile drawer, dialogs — single strongest elevation in the app */
+.neu-float {
+  box-shadow: var(--shadow-float);
 }
 
 /* Pressed feedback for tactile buttons */
