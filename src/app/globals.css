@@ -13,6 +13,8 @@
  * contact shadow (bottom-right) with a highlight (top-left); recessed
  * surfaces invert that pairing. Flat surfaces carry hierarchy through
  * borders and whitespace instead of shadows.
+ *
+ * Scrollbars follow the same language: recessed track, raised thumb.
  * ------------------------------------------------------------------ */
 
 :root {
@@ -195,6 +197,14 @@ body {
   border-radius: 4px;
 }
 
+/* The keyword draft input lives inside its own focus-ringed container, so
+ * it must not draw a second ring — that reads as a nested input box.
+ * Unlayered with higher specificity than the rule above (utilities live in
+ * @layer utilities, which always loses to unlayered author CSS). */
+.keyword-chips > input:focus-visible {
+  outline-style: none;
+}
+
 ::selection {
   background-color: var(--accent-soft);
 }
@@ -205,6 +215,58 @@ body {
 select option {
   background-color: var(--surface-overlay);
   color: var(--text-primary);
+}
+
+/* Browser autofill: keep the recessed input look instead of the UA wash.
+ * Scoped to text inputs only (city, keyword draft, select filters), so no
+ * unrelated control is affected. The near-infinite background transition
+ * suppresses Chrome's autofill background while border, radius, shadow,
+ * and text color stay exactly as designed; the fill color keeps readable
+ * contrast in both themes. Autofill itself stays enabled. */
+input[type="text"]:-webkit-autofill,
+input[type="text"]:-webkit-autofill:hover,
+input[type="text"]:-webkit-autofill:focus,
+input[type="text"]:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--text-primary);
+  caret-color: var(--text-primary);
+  transition: background-color 9999s ease-out;
+}
+input[type="text"]:autofill {
+  color: var(--text-primary);
+  caret-color: var(--text-primary);
+}
+
+/* ---------------- Neumorphic scrollbars ---------------- */
+/* Thin, theme-aware scrollbars for every scroll container: the page, the
+ * desktop table overflow, and dropdown panels. Recessed track with the
+ * inset shadow, softly raised thumb — the same surface language as the
+ * rest of the UI. Blink/WebKit use the pseudo-elements; Firefox uses the
+ * two scrollbar-* properties (colors match, shadows unsupported there). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) var(--surface-recessed);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background-color: var(--surface-recessed);
+  border-radius: 8px;
+  box-shadow: var(--shadow-inset);
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--surface-raised);
+  border: 2px solid var(--surface-recessed);
+  border-radius: 8px;
+  box-shadow: var(--shadow-raised-sm);
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--surface-overlay);
+}
+::-webkit-scrollbar-corner {
+  background-color: transparent;
 }
 
 /* ---------------- Elevation utilities (token-driven) ---------------- */

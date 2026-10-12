@@ -1,10 +1,8 @@
 import type {
   InputHTMLAttributes,
   ReactNode,
-  SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from "react";
-import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/storage";
 
 const FIELD_STYLES =
@@ -37,24 +35,6 @@ export function Field({
 
 export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cn(FIELD_STYLES, props.className)} />;
-}
-
-export function SelectInput(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  const { className, children, ...rest } = props;
-  return (
-    <span className="relative block">
-      <select
-        {...rest}
-        className={cn(FIELD_STYLES, "cursor-pointer appearance-none pr-9", className)}
-      >
-        {children}
-      </select>
-      <ChevronDown
-        aria-hidden="true"
-        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink3"
-      />
-    </span>
-  );
 }
 
 export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {

@@ -5,7 +5,6 @@ import type { FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
-  ChevronDown,
   Loader2,
   MapPin,
   RotateCcw,
@@ -18,9 +17,12 @@ import { CompanyTable } from "@/components/companies/company-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
-import { Field, SelectInput, TextInput } from "@/components/ui/field";
+import { Field, TextInput } from "@/components/ui/field";
+import { KeywordChipsInput } from "@/components/ui/keyword-chips-input";
+import { Select } from "@/components/ui/select";
 import { OsmAttribution } from "@/components/osm-attribution";
-import { LIVE_CATEGORIES, LIVE_COUNTRY_SUGGESTIONS, MAX_RESULTS_OPTIONS } from "@/data/search-options";
+import { countrySearchOptions } from "@/data/countries";
+import { CATEGORY_OPTIONS, MAX_RESULTS_SELECT_OPTIONS } from "@/data/search-options";
 import { useSearchHistory } from "@/hooks/use-search-history";
 import { useCompanySearch } from "@/hooks/use-company-search";
 import type { SearchError } from "@/hooks/use-company-search";
@@ -35,6 +37,12 @@ import {
 } from "@/lib/filter-leads";
 import type { LeadSearchFilters, SortOrder } from "@/lib/filter-leads";
 import { AUTO_RUN_PARAM, filtersToSearchParams, searchParamsToFilters } from "@/lib/search-params";
+
+/** Result sort orders for the shared non-searchable Select. */
+const SORT_OPTIONS = [
+  { value: "provider", label: "Default order" },
+  { value: "name", label: "Name (A–Z)" },
+] as const;
 
 function ErrorState({ error, onRetry }: { error: SearchError; onRetry: () => void }) {
   const Icon = error.kind === "location-not-found" ? MapPin : AlertTriangle;
@@ -172,6 +180,8 @@ export function SearchClient() {
       ),
     [companies],
   );
+  // Static ISO list: built once, filtered per keystroke inside the control.
+  const countryOptions = useMemo(() => countrySearchOptions(), []);
   const displayed = useMemo(
     () => sortByIdOrder(companies, names, sort),
     [companies, names, sort],
@@ -198,22 +208,21 @@ export function SearchClient() {
         </h2>
         <Card>
           <CardBody>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <Field label="Country (optional)" htmlFor="search-country" hint="Narrows the place lookup.">
-                <TextInput
+            {/* Top-aligned cells: every cell lays out label first, then its
+              control, so inputs and the action buttons share one baseline
+              even when hints or keyword chips change a cell's height. */}
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <Field label="Country (optional)" htmlFor="search-country" hint="Narrows the place lookup. Type to search all countries.">
+                <Select
                   id="search-country"
-                  type="text"
                   value={filters.country}
-                  onChange={(event) => update("country", event.target.value)}
+                  options={countryOptions}
+                  onChange={(next) => update("country", next)}
                   placeholder="e.g. Germany"
-                  list="search-country-options"
-                  autoComplete="off"
+                  allowClear
+                  clearLabel="Clear country"
+                  emptyText="No countries match your search"
                 />
-                <datalist id="search-country-options">
-                  {LIVE_COUNTRY_SUGGESTIONS.map((country) => (
-                    <option key={country} value={country} />
-                  ))}
-                </datalist>
               </Field>
 
               <Field label="City or region" htmlFor="search-city" hint="Required — bounds the search area.">
@@ -223,65 +232,63 @@ export function SearchClient() {
                   value={filters.city}
                   onChange={(event) => update("city", event.target.value)}
                   placeholder="e.g. Berlin"
-                  autoComplete="off"
+                  autoComplete="address-level2"
                   required
                   aria-required="true"
                 />
               </Field>
 
-              <Field label="Business category" htmlFor="search-category">
-                <SelectInput
+              <Field label="Business category" htmlFor="search-category" hint="Only categories mapped by OpenStreetMap are listed.">
+                <Select
                   id="search-category"
                   value={filters.category}
-                  onChange={(event) => update("category", event.target.value)}
-                >
-                  <option value="all">All businesses</option>
-                  {LIVE_CATEGORIES.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </SelectInput>
+                  options={CATEGORY_OPTIONS}
+                  onChange={(next) => update("category", next)}
+                  placeholder="Search categories…"
+                  emptyText="No categories match your search"
+                />
               </Field>
 
-              <Field label="Keyword (optional)" htmlFor="search-keyword" hint="Matches business names in the area.">
-                <TextInput
+              <Field label="Keywords (optional)" htmlFor="search-keyword" hint="Press Enter or comma to add each keyword.">
+                <KeywordChipsInput
                   id="search-keyword"
-                  type="text"
                   value={filters.keyword}
-                  onChange={(event) => update("keyword", event.target.value)}
+                  onChange={(next) => update("keyword", next)}
                   placeholder="e.g. bakery, dental"
-                  autoComplete="off"
                 />
               </Field>
 
               <Field label="Maximum results" htmlFor="search-max">
-                <SelectInput
+                <Select
                   id="search-max"
                   value={String(filters.maxResults)}
-                  onChange={(event) => update("maxResults", Number(event.target.value))}
-                >
-                  {MAX_RESULTS_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      Up to {option}
-                    </option>
-                  ))}
-                </SelectInput>
+                  options={MAX_RESULTS_SELECT_OPTIONS}
+                  onChange={(next) => update("maxResults", Number(next))}
+                  searchable={false}
+                />
               </Field>
 
-              <div className="flex items-end gap-3 md:col-span-2 xl:col-span-1">
-                <Button type="submit" className="flex-1" disabled={status === "loading"}>
-                  {status === "loading" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Search className="h-4 w-4" aria-hidden="true" />
-                  )}
-                  Search Companies
-                </Button>
-                <Button type="button" variant="secondary" onClick={handleReset}>
-                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                  Reset
-                </Button>
+              {/* Action cell: the invisible label spacer mirrors Field
+                labels so the buttons align with the inputs, not with the
+                bottom of taller cells. No margin hacks, no fixed heights. */}
+              <div className="flex flex-col md:col-span-2 xl:col-span-1">
+                <span aria-hidden="true" className="mb-1.5 block select-none text-[13px] font-medium invisible">
+                  Search actions
+                </span>
+                <div className="flex gap-3">
+                  <Button type="submit" className="flex-1" disabled={status === "loading"}>
+                    {status === "loading" ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Search className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    Search Companies
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={handleReset}>
+                    <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                    Reset
+                  </Button>
+                </div>
               </div>
             </form>
           </CardBody>
@@ -322,21 +329,14 @@ export function SearchClient() {
                     <label htmlFor="results-sort" className="sr-only">
                       Sort results
                     </label>
-                    <span className="relative inline-block">
-                      <select
-                        id="results-sort"
-                        value={sort}
-                        onChange={(event) => setSort(event.target.value as SortOrder)}
-                        className="neu-recessed h-9 cursor-pointer appearance-none rounded-lg border border-line-soft bg-recessed pl-2 pr-8 text-[13px] text-ink transition-[box-shadow,background-color,border-color] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <option value="provider">Default order</option>
-                        <option value="name">Name (A–Z)</option>
-                      </select>
-                      <ChevronDown
-                        aria-hidden="true"
-                        className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink3"
-                      />
-                    </span>
+                    <Select
+                      id="results-sort"
+                      value={sort}
+                      options={[...SORT_OPTIONS]}
+                      onChange={(next) => setSort(next as SortOrder)}
+                      searchable={false}
+                      size="sm"
+                    />
                     {busy ? (
                       <>
                         <span className="inline-flex items-center gap-1.5 text-xs text-ink2" role="status">
