@@ -20,7 +20,6 @@ import { EmptyState } from "@/components/ui/feedback";
 import { Field, TextInput } from "@/components/ui/field";
 import { KeywordChipsInput } from "@/components/ui/keyword-chips-input";
 import { Select } from "@/components/ui/select";
-import { OsmAttribution } from "@/components/osm-attribution";
 import { countrySearchOptions } from "@/data/countries";
 import { CATEGORY_OPTIONS, MAX_RESULTS_SELECT_OPTIONS } from "@/data/search-options";
 import { useSearchHistory } from "@/hooks/use-search-history";
@@ -386,7 +385,6 @@ export function SearchClient() {
                   onToggleSaved={toggleCompany}
                   caption="Live company search results from OpenStreetMap"
                 />
-                <OsmAttribution />
               </div>
             )
           ) : (
