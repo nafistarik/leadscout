@@ -77,7 +77,9 @@ export function KeywordChipsInput({
           key={chip.toLowerCase()}
           className="inline-flex max-w-full items-center gap-1 rounded-md bg-accent-soft py-0.5 pl-2 pr-1 text-xs font-medium text-accent-ink"
         >
-          <span className="truncate">{chip}</span>
+          <span className="truncate" title={chip}>
+            {chip}
+          </span>
           <button
             type="button"
             onClick={() => removeAt(index)}

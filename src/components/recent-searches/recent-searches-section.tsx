@@ -54,7 +54,7 @@ export function RecentSearchesSection() {
         <button
           type="button"
           onClick={clearHistory}
-          className="cursor-pointer text-xs font-medium text-ink3 hover:text-status-error-fg"
+          className="cursor-pointer text-xs font-medium text-ink3 transition-colors hover:text-status-error-fg"
         >
           Clear
         </button>
@@ -69,7 +69,7 @@ export function RecentSearchesSection() {
               type="button"
               onClick={() => handleApply(entry.id)}
               title={`Run again: ${describeHistoryEntry(entry)}`}
-              className="min-w-0 flex-1 cursor-pointer truncate text-left text-[13px] text-ink2 hover:text-ink"
+              className="min-w-0 flex-1 cursor-pointer truncate text-left text-[13px] text-ink2 transition-colors hover:text-ink"
             >
               <span className="font-medium">{describeHistoryEntry(entry)}</span>{" "}
               <span className="text-xs text-ink3">

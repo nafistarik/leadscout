@@ -274,7 +274,7 @@ export function Select({
           onKeyDown={handleTriggerKeyDown}
           className={cn(
             "neu-recessed flex w-full cursor-pointer items-center gap-2 rounded-lg border border-line-soft bg-recessed text-left text-ink",
-            "transition-[box-shadow,background-color,border-color]",
+            "transition-[box-shadow,background-color,border-color] hover:bg-alt",
             "disabled:cursor-not-allowed disabled:opacity-60",
             TRIGGER_SIZES[size],
             triggerPadding,
@@ -338,7 +338,7 @@ export function Select({
                       if (highlight !== index) setHighlight(index);
                     }}
                     className={cn(
-                      "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm",
+                      "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm transition-colors",
                       isActive ? "bg-recessed text-ink" : "text-ink2",
                       isSelected && "font-medium text-accent-ink",
                     )}

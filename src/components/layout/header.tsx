@@ -62,7 +62,7 @@ export function Header({
         <button
           type="button"
           onClick={onOpenMobileNav}
-          className="neu-raised-sm neu-pressable inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line-soft bg-raised text-ink2 md:hidden"
+          className="neu-raised-sm neu-pressable inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-line-soft bg-raised text-ink2 hover:bg-alt hover:text-ink md:hidden"
           aria-label="Open navigation menu"
         >
           <Menu className="h-5 w-5" aria-hidden="true" />
@@ -87,7 +87,7 @@ export function MobileNavCloseButton({ onClose }: { onClose: () => void }) {
       type="button"
       onClick={onClose}
       aria-label="Close navigation menu"
-      className="neu-raised-sm neu-pressable inline-flex h-10 w-10 items-center justify-center rounded-lg border border-line-soft bg-raised text-ink2"
+      className="neu-raised-sm neu-pressable inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-line-soft bg-raised text-ink2 hover:bg-alt hover:text-ink"
     >
       <X className="h-5 w-5" aria-hidden="true" />
     </button>

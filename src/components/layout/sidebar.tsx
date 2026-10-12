@@ -51,7 +51,7 @@ function ClearLocalData() {
           <button
             type="button"
             onClick={handleClear}
-            className="cursor-pointer rounded-md bg-status-error-fg px-2 py-1 text-xs font-semibold text-status-error-bg"
+            className="cursor-pointer rounded-md bg-status-error-fg px-2 py-1 text-xs font-semibold text-status-error-bg transition hover:brightness-95"
           >
             Yes, clear
           </button>

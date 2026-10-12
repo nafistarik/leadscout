@@ -295,12 +295,16 @@ input[type="text"]:autofill {
   box-shadow: var(--shadow-float);
 }
 
-/* Pressed feedback for tactile buttons */
+/* Pressed feedback for tactile buttons. Covers every property buttons
+ * animate on hover/press (including filter for brightness hovers) so no
+ * hover state snaps while another animates. */
 .neu-pressable {
   transition:
     box-shadow var(--duration-fast) var(--ease-out),
     transform var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out);
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    filter var(--duration-fast) var(--ease-out);
 }
 .neu-pressable:active {
   box-shadow: var(--shadow-inset);

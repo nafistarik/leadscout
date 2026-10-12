@@ -100,7 +100,7 @@ function SocialChip({ link, fromSite }: { link: SocialLink; fromSite?: boolean }
       target="_blank"
       rel="noopener noreferrer"
       title={`${link.url}${fromSite ? " (found on the website)" : ""}`}
-      className="neu-recessed inline-flex items-center gap-1 rounded-md border border-line-soft bg-recessed px-1.5 py-0.5 text-[11px] font-medium text-ink2 hover:text-ink"
+      className="neu-recessed inline-flex items-center gap-1 rounded-md border border-line-soft bg-recessed px-1.5 py-0.5 text-[11px] font-medium text-ink2 transition-colors hover:text-ink"
     >
       {link.network === "whatsapp" ? <MessageCircle className="h-3 w-3" aria-hidden="true" /> : null}
       {SOCIAL_LABELS[link.network]}
@@ -309,7 +309,7 @@ export function WebsiteCheckCell({
       <button
         type="button"
         onClick={onRecheck}
-        className="cursor-pointer text-[11px] text-ink3 underline-offset-2 hover:text-ink hover:underline"
+        className="cursor-pointer text-[11px] text-ink3 underline-offset-2 transition-colors hover:text-ink hover:underline"
         title={`Checked ${analysis.analyzedAt.slice(0, 10)}`}
       >
         Recheck
