@@ -4,7 +4,7 @@
  * Missing information is represented as `null` — never invented. The UI must
  * render `null` fields as unavailable rather than substituting placeholders.
  */
-export type DataProvenance = "osm" | "demo";
+export type DataProvenance = "osm" | "overture" | "demo";
 
 export interface Company {
   /** Stable provider-specific id, e.g. "osm:node/123456". */

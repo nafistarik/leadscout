@@ -16,7 +16,7 @@ function isValidCompany(value: unknown): value is Company {
   return (
     typeof c.id === "string" &&
     c.id.length > 0 &&
-    (c.provenance === "osm" || c.provenance === "demo") &&
+    (c.provenance === "osm" || c.provenance === "overture" || c.provenance === "demo") &&
     typeof c.name === "string" &&
     c.name.length > 0 &&
     typeof c.category === "string" &&

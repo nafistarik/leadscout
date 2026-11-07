@@ -111,7 +111,7 @@ function SocialChip({ link, fromSite }: { link: SocialLink; fromSite?: boolean }
 
 function FromSiteTag() {
   return (
-    <span className="ml-1 rounded bg-status-info-bg px-1 text-[10px] font-medium text-status-info-fg" title="Found on the business website, not in OpenStreetMap">
+    <span className="ml-1 rounded bg-status-info-bg px-1 text-[10px] font-medium text-status-info-fg" title="Found on the business website, not in the map data">
       site
     </span>
   );
@@ -366,7 +366,7 @@ export function LeadDetailsPanel({
       </section>
 
       <section>
-        <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink3">Business (OpenStreetMap)</h4>
+        <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink3">Business ({company.source})</h4>
         <dl>
           <DetailRow label="Address">{details.address ?? "Not listed"}</DetailRow>
           <DetailRow label="Category">{company.category}</DetailRow>

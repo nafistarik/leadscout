@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Overture extract output (uploaded to Hugging Face, never committed)
+/scripts/overture/out/

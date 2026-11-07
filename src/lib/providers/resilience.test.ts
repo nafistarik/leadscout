@@ -3,6 +3,7 @@ import { endpointsForHost, fetchOverpass, OVERPASS_ENDPOINTS } from "@/lib/provi
 import { companyProvider } from "@/lib/providers/index";
 import { resolveSearchArea } from "@/lib/providers/nominatim";
 import { tagsForCategory } from "@/lib/providers/osm-tags";
+import { OVERTURE_DATA_URL } from "@/lib/providers/overture";
 import { ProviderError } from "@/lib/providers/types";
 import type { SearchArea } from "@/lib/providers/nominatim";
 
@@ -35,6 +36,8 @@ function installFetch(
 ): string[] {
   const calls: string[] = [];
   globals.fetch = (url: string, init?: FetchInit): Promise<Response> => {
+    // No prepared cities: these tests cover the live OpenStreetMap path only.
+    if (url.startsWith(OVERTURE_DATA_URL)) return Promise.resolve(jsonResponse({ release: "test", cities: [] }));
     calls.push(url);
     return impl(url, init);
   };
@@ -275,6 +278,7 @@ describe("companyProvider.search orchestration (stubbed fetch — no network)", 
   function installProviderStubs() {
     const calls: string[] = [];
     globals.fetch = (url: string): Promise<Response> => {
+      if (url.startsWith(OVERTURE_DATA_URL)) return Promise.resolve(jsonResponse({ release: "test", cities: [] }));
       calls.push(url);
       if (url.startsWith("https://nominatim.openstreetmap.org/")) {
         const huge = url.includes("Bigcountry");

@@ -5,6 +5,7 @@ import { fetchNominatimPois } from "@/lib/providers/nominatim-pois";
 import { dedupeCompanies, fetchOverpass, sanitizeKeyword } from "@/lib/providers/overpass";
 import type { OverpassFetchResult, OverpassSearchParams } from "@/lib/providers/overpass";
 import { tagsForCategory } from "@/lib/providers/osm-tags";
+import { searchOverture } from "@/lib/providers/overture";
 import type {
   CompanyProvider,
   ProviderSearchRequest,
@@ -161,6 +162,28 @@ async function runSearchInner(
   };
 }
 
+/**
+ * Prepared cities come from the Overture files; every other city, and a
+ * prepared one whose files fail to load, goes to the live OSM search.
+ */
+async function searchPreparedOrLive(
+  request: ProviderSearchRequest,
+  options: { signal: AbortSignal },
+): Promise<ProviderSearchResult> {
+  let preparedFailed = false;
+  try {
+    const prepared = await searchOverture(request, resultLimit(request.maxResults), options);
+    if (prepared) return prepared;
+  } catch (error) {
+    if (options.signal.aborted) throw error;
+    preparedFailed = true;
+  }
+  const live = await runSearch(request, options);
+  if (!preparedFailed) return live;
+  const note = "The prepared business data could not be loaded, so these are live OpenStreetMap results with fewer contact details.";
+  return { ...live, meta: { ...live.meta, coverageNote: [note, live.meta.coverageNote].filter(Boolean).join(" ") } };
+}
+
 /** Runs fetchOverpass under its own phase deadline linked to the caller. */
 async function fetchOverpassWithinBudget(
   params: OverpassSearchParams,
@@ -208,7 +231,7 @@ class OverpassCompanyProvider implements CompanyProvider {
     const key = requestKey(request);
     const cached = resultCache.get(key);
     if (cached) return cached;
-    const result = await inflight.run(key, () => runSearch(request, options));
+    const result = await inflight.run(key, () => searchPreparedOrLive(request, options));
     resultCache.set(key, result);
     return result;
   }

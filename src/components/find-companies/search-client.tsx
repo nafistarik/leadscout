@@ -36,6 +36,12 @@ import {
 } from "@/lib/filter-leads";
 import type { LeadSearchFilters, SortOrder } from "@/lib/filter-leads";
 import { AUTO_RUN_PARAM, filtersToSearchParams, searchParamsToFilters } from "@/lib/search-params";
+import { PREPARED_CITIES } from "../../../scripts/overture/cities";
+
+/** Human name of the data source behind a result set. */
+function sourceName(providerId: string): string {
+  return providerId === "overture" ? "Overture Maps" : "OpenStreetMap";
+}
 
 /** Result sort orders for the shared non-searchable Select. */
 const SORT_OPTIONS = [
@@ -86,7 +92,7 @@ function LoadingState() {
       <CardBody className="px-6 py-8">
         <p className="flex items-center justify-center gap-2 text-sm font-medium text-ink2">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          Searching OpenStreetMap…
+          Searching businesses…
         </p>
         <div className="mt-6 space-y-3" aria-hidden="true">
           {[0, 1, 2].map((index) => (
@@ -224,20 +230,30 @@ export function SearchClient() {
                 />
               </Field>
 
-              <Field label="City or region" htmlFor="search-city" hint="Required — bounds the search area.">
+              <Field
+                label="City or region"
+                htmlFor="search-city"
+                hint="Required. Suggested cities load instantly with full contact data; any other city is searched live."
+              >
                 <TextInput
                   id="search-city"
                   type="text"
                   value={filters.city}
                   onChange={(event) => update("city", event.target.value)}
-                  placeholder="e.g. Berlin"
-                  autoComplete="address-level2"
+                  placeholder="e.g. Dhaka"
+                  autoComplete="off"
+                  list="prepared-cities"
                   required
                   aria-required="true"
                 />
+                <datalist id="prepared-cities">
+                  {PREPARED_CITIES.map((city) => (
+                    <option key={city.id} value={city.name} />
+                  ))}
+                </datalist>
               </Field>
 
-              <Field label="Business category" htmlFor="search-category" hint="Only categories mapped by OpenStreetMap are listed.">
+              <Field label="Business category" htmlFor="search-category" hint="Categories work in every city.">
                 <Select
                   id="search-category"
                   value={filters.category}
@@ -305,8 +321,8 @@ export function SearchClient() {
                 title={`No mapped businesses found in ${meta.areaLabel}`}
                 description={
                   activeDescriptions.length > 0
-                    ? `OpenStreetMap has no matching businesses for ${activeDescriptions.join(" · ")} in this area. Try a larger city, a broader category, or fewer keywords.`
-                    : "OpenStreetMap has no matching businesses in this area. Try a larger city or a broader category."
+                    ? `${sourceName(meta.providerId)} has no matching businesses for ${activeDescriptions.join(" · ")} in this area. Try a larger city, a broader category, or fewer keywords.`
+                    : `${sourceName(meta.providerId)} has no matching businesses in this area. Try a larger city or a broader category.`
                 }
                 action={
                   <Button variant="secondary" onClick={handleReset}>
@@ -320,9 +336,12 @@ export function SearchClient() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm text-ink2">
                     <strong className="font-semibold text-ink">
-                      {displayed.length} live result{displayed.length === 1 ? "" : "s"}
+                      {displayed.length} result{displayed.length === 1 ? "" : "s"}
                     </strong>
-                    <span className="text-ink3"> · {meta.areaLabel}</span>
+                    <span className="text-ink3">
+                      {" "}
+                      · {meta.areaLabel} · {sourceName(meta.providerId)}
+                    </span>
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     <label htmlFor="results-sort" className="sr-only">
@@ -372,7 +391,9 @@ export function SearchClient() {
                 ) : null}
                 {meta.truncated ? (
                   <p className="text-xs leading-relaxed text-ink3">
-                    Server limit reached — more businesses may exist in this area.
+                    {meta.providerId === "overture"
+                      ? `Showing the best ${displayed.length} of ${meta.examined.toLocaleString("en")} matches — businesses without a website come first. Raise Maximum results or add a keyword to see others.`
+                      : "Server limit reached — more businesses may exist in this area."}
                   </p>
                 ) : null}
                 {meta.coverageNote ? (
@@ -383,7 +404,7 @@ export function SearchClient() {
                   companies={displayed}
                   isSaved={isCompanySaved}
                   onToggleSaved={toggleCompany}
-                  caption="Live company search results from OpenStreetMap"
+                  caption={`Company search results from ${sourceName(meta.providerId)}`}
                 />
               </div>
             )
