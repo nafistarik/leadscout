@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import type { ReactNode } from "react";
 import { Building2, ChevronDown, MapPin } from "lucide-react";
 import {
   ContactList,
@@ -21,6 +22,12 @@ interface CompanyTableProps {
   isSaved: (companyId: string) => boolean;
   onToggleSaved: (company: Company) => void;
   caption?: string;
+  /**
+   * Extra per-lead controls above the Save button (the pipeline status on
+   * Saved Leads). `layout` keeps element ids unique, since the table and
+   * the mobile cards render the same lead at once.
+   */
+  renderLeadActions?: (company: Company, layout: "table" | "card") => ReactNode;
 }
 
 function rowInsights(company: Company, checks: WebsiteChecks) {
@@ -59,6 +66,7 @@ export function CompanyTable({
   isSaved,
   onToggleSaved,
   caption,
+  renderLeadActions,
 }: CompanyTableProps) {
   const checks = useWebsiteChecks();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
@@ -134,6 +142,7 @@ export function CompanyTable({
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex flex-col items-end gap-2">
+                        {renderLeadActions?.(company, "table")}
                         <SaveLeadButton
                           saved={saved}
                           onToggle={() => onToggleSaved(company)}
@@ -200,6 +209,7 @@ export function CompanyTable({
                   />
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-2">
+                  {renderLeadActions?.(company, "card")}
                   <SaveLeadButton
                     saved={saved}
                     onToggle={() => onToggleSaved(company)}

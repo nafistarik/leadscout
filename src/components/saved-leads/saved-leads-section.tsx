@@ -1,12 +1,67 @@
 "use client";
 
+import { useState } from "react";
 import { BookmarkX, Download } from "lucide-react";
 import { CompanyTable } from "@/components/companies/company-table";
+import { LeadStatusControl } from "@/components/saved-leads/lead-status-control";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
+import { useLeadPipeline } from "@/hooks/use-lead-pipeline";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
 import { useWebsiteChecks } from "@/hooks/use-website-analysis";
 import { downloadCsv, exportFilename, rowsToCsv, savedRecordsToRows } from "@/lib/csv";
+import { LEAD_STATUS_LABELS, LEAD_STATUSES } from "@/lib/lead-pipeline";
+import type { LeadStatus } from "@/lib/lead-pipeline";
+import { cn } from "@/lib/storage";
+
+type StatusFilter = LeadStatus | "all";
+
+/**
+ * One-row status filter with a count per status; statuses with no leads
+ * are hidden so the row stays short, except the one currently selected.
+ */
+function StatusFilterBar({
+  value,
+  counts,
+  total,
+  onChange,
+}: {
+  value: StatusFilter;
+  counts: Record<LeadStatus, number>;
+  total: number;
+  onChange: (next: StatusFilter) => void;
+}) {
+  const options: { value: StatusFilter; label: string; count: number }[] = [
+    { value: "all", label: "All", count: total },
+    ...LEAD_STATUSES.filter((status) => counts[status] > 0 || status === value).map((status) => ({
+      value: status,
+      label: LEAD_STATUS_LABELS[status],
+      count: counts[status],
+    })),
+  ];
+  return (
+    <div role="group" aria-label="Filter saved leads by status" className="flex flex-wrap items-center gap-1.5">
+      {options.map((option) => {
+        const active = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+              active ? "border-transparent bg-accent text-on-accent" : "border-line-soft bg-raised text-ink2 hover:text-ink",
+            )}
+          >
+            {option.label}
+            <span className={cn("tabular-nums", active ? "opacity-90" : "text-ink3")}>{option.count}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 /**
  * In-page saved-leads collection: real company snapshots with the same
@@ -15,8 +70,14 @@ import { downloadCsv, exportFilename, rowsToCsv, savedRecordsToRows } from "@/li
 export function SavedLeadsSection() {
   const { records, storageAvailable, isCompanySaved, toggleCompany } = useSavedLeads();
   const checks = useWebsiteChecks();
+  const { entryFor, statusOf, setStatus } = useLeadPipeline();
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  const companies = records.map((record) => record.company);
+  const counts = Object.fromEntries(LEAD_STATUSES.map((status) => [status, 0])) as Record<LeadStatus, number>;
+  for (const record of records) counts[statusOf(record.id)] += 1;
+  const companies = records
+    .filter((record) => statusFilter === "all" || statusOf(record.id) === statusFilter)
+    .map((record) => record.company);
 
   function handleExport() {
     const rows = savedRecordsToRows(records, (company) => checks.analysisFor(company.website));
@@ -72,12 +133,29 @@ export function SavedLeadsSection() {
           </CardBody>
         </Card>
       ) : (
-        <CompanyTable
-          companies={companies}
-          isSaved={isCompanySaved}
-          onToggleSaved={toggleCompany}
-          caption="Saved leads"
-        />
+        <div className="space-y-3">
+          <StatusFilterBar value={statusFilter} counts={counts} total={records.length} onChange={setStatusFilter} />
+          {companies.length === 0 ? (
+            <p className="text-sm text-ink2">
+              No saved leads are {statusFilter === "all" ? "here" : `marked “${LEAD_STATUS_LABELS[statusFilter]}”`} right now.
+            </p>
+          ) : (
+            <CompanyTable
+              companies={companies}
+              isSaved={isCompanySaved}
+              onToggleSaved={toggleCompany}
+              caption="Saved leads"
+              renderLeadActions={(company, layout) => (
+                <LeadStatusControl
+                  idPrefix={`${layout}-${company.id}`}
+                  companyName={company.name}
+                  entry={entryFor(company.id)}
+                  onChange={(status, lostReason) => setStatus(company.id, status, lostReason)}
+                />
+              )}
+            />
+          )}
+        </div>
       )}
     </section>
   );
