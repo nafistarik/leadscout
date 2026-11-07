@@ -6,6 +6,8 @@ export function cn(...classes: Array<string | false | null | undefined>): string
 export const STORAGE_KEYS = {
   /** Versioned envelope of saved real-company snapshots. */
   savedLeadsV2: "leadscout.savedLeads.v2",
+  /** Lead pipeline: saved-lead id -> status, notes, follow-up, contact count. */
+  leadPipeline: "leadscout.leadPipeline.v1",
   theme: "leadscout.theme.v1",
   /** Nominatim geocode cache (query key -> area + timestamp). */
   geocodeCache: "leadscout.geocodeCache.v1",

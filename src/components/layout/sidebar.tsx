@@ -21,8 +21,9 @@ function isActive(pathname: string, href: string): boolean {
 
 /**
  * Compact destructive action anchored at the bottom of the sidebar.
- * Clears saved leads, recent searches, and search statistics after explicit
- * confirmation. Theme preference and provider/website caches are kept.
+ * Clears saved leads with their pipeline, recent searches, and search
+ * statistics after explicit confirmation. Theme preference and
+ * provider/website caches are kept.
  */
 function ClearLocalData() {
   const [confirming, setConfirming] = useState(false);
@@ -30,6 +31,7 @@ function ClearLocalData() {
   function handleClear() {
     try {
       window.localStorage.removeItem(STORAGE_KEYS.savedLeadsV2);
+      window.localStorage.removeItem(STORAGE_KEYS.leadPipeline);
       window.localStorage.removeItem(STORAGE_KEYS.searchHistory);
       notifyStorageChanged();
     } catch {
