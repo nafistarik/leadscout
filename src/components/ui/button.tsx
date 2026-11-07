@@ -25,18 +25,23 @@ const SIZE_STYLES: Record<ButtonSize, string> = {
   md: "h-10 px-4 text-sm",
 };
 
+/**
+ * Button look as a class string, for links that should look like buttons
+ * (e.g. opening WhatsApp or the mail app).
+ */
+export function buttonClassName(variant: ButtonVariant = "primary", size: ButtonSize = "md", className?: string): string {
+  return cn(
+    "inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border font-medium",
+    "transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+    VARIANT_STYLES[variant],
+    SIZE_STYLES[size],
+    className,
+  );
+}
+
 export function Button({ variant = "primary", size = "md", className, children, ...rest }: ButtonProps) {
   return (
-    <button
-      {...rest}
-      className={cn(
-        "inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border font-medium",
-        "transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-        VARIANT_STYLES[variant],
-        SIZE_STYLES[size],
-        className,
-      )}
-    >
+    <button {...rest} className={buttonClassName(variant, size, className)}>
       {children}
     </button>
   );

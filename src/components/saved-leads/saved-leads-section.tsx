@@ -4,6 +4,7 @@ import { useState } from "react";
 import { BookmarkX, Download } from "lucide-react";
 import { CompanyTable } from "@/components/companies/company-table";
 import { LeadNotesEditor } from "@/components/saved-leads/lead-notes-editor";
+import { LeadPitchPanel } from "@/components/saved-leads/lead-pitch-panel";
 import { LeadStatusControl } from "@/components/saved-leads/lead-status-control";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -75,7 +76,7 @@ function StatusFilterBar({
 export function SavedLeadsSection() {
   const { records, storageAvailable, isCompanySaved, toggleCompany } = useSavedLeads();
   const checks = useWebsiteChecks();
-  const { entryFor, statusOf, setStatus, updateDetails, followUpDue } = useLeadPipeline();
+  const { entryFor, statusOf, setStatus, updateDetails, markContacted, followUpDue } = useLeadPipeline();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const counts = Object.fromEntries(LEAD_STATUSES.map((status) => [status, 0])) as Record<LeadStatus, number>;
@@ -175,12 +176,18 @@ export function SavedLeadsSection() {
                 />
               )}
               renderLeadDetails={(company, layout) => (
-                <LeadNotesEditor
-                  key={`${company.id}:${entryFor(company.id)?.notes ?? ""}`}
-                  idPrefix={`${layout}-${company.id}`}
-                  entry={entryFor(company.id)}
-                  onChange={(patch) => updateDetails(company.id, patch)}
-                />
+                <>
+                  <LeadPitchPanel
+                    idPrefix={`${layout}-${company.id}`}
+                    company={company}
+                    onContacted={() => markContacted(company.id)}
+                  />
+                  <LeadNotesEditor
+                    idPrefix={`${layout}-${company.id}`}
+                    entry={entryFor(company.id)}
+                    onChange={(patch) => updateDetails(company.id, patch)}
+                  />
+                </>
               )}
             />
           )}

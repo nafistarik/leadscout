@@ -27,6 +27,13 @@ export function LeadNotesEditor({
 }) {
   const saved = entry?.notes ?? "";
   const [draft, setDraft] = useState(saved);
+  // Take a newly saved note (this box's own blur, or another tab) without
+  // remounting, so focus can move straight on to the date picker.
+  const [seen, setSeen] = useState(saved);
+  if (seen !== saved) {
+    setSeen(saved);
+    setDraft(saved);
+  }
   const notesId = `${idPrefix}-notes`;
   const dateId = `${idPrefix}-follow-up`;
 

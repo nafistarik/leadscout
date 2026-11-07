@@ -8,6 +8,8 @@ export const STORAGE_KEYS = {
   savedLeadsV2: "leadscout.savedLeads.v2",
   /** Lead pipeline: saved-lead id -> status, notes, follow-up, contact count. */
   leadPipeline: "leadscout.leadPipeline.v1",
+  /** The user's own name and portfolio link, appended to pitch messages. */
+  pitchSignature: "leadscout.pitchSignature.v1",
   theme: "leadscout.theme.v1",
   /** Nominatim geocode cache (query key -> area + timestamp). */
   geocodeCache: "leadscout.geocodeCache.v1",
