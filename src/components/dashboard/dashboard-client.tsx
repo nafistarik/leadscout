@@ -49,7 +49,7 @@ export function DashboardClient() {
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink2 sm:text-[15px]">
           LeadScout helps freelance web developers discover local businesses that may need a website.
-          Search real companies via OpenStreetMap, check their websites, and save promising leads.
+          Search real companies via Overture Maps and OpenStreetMap, check their websites, and save promising leads.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link href="/find-companies">

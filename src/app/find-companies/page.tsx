@@ -4,7 +4,7 @@ import { SearchClient } from "@/components/find-companies/search-client";
 
 export const metadata: Metadata = {
   title: "Find Companies",
-  description: "Discover real businesses via OpenStreetMap, check their websites, and save promising leads.",
+  description: "Discover real businesses via Overture Maps and OpenStreetMap, check their websites, and save promising leads.",
 };
 
 export default function FindCompaniesPage() {
