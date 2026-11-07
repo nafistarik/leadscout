@@ -28,6 +28,8 @@ interface CompanyTableProps {
    * the mobile cards render the same lead at once.
    */
   renderLeadActions?: (company: Company, layout: "table" | "card") => ReactNode;
+  /** Extra content at the top of an opened details panel (notes, follow-up). */
+  renderLeadDetails?: (company: Company, layout: "table" | "card") => ReactNode;
 }
 
 function rowInsights(company: Company, checks: WebsiteChecks) {
@@ -67,6 +69,7 @@ export function CompanyTable({
   onToggleSaved,
   caption,
   renderLeadActions,
+  renderLeadDetails,
 }: CompanyTableProps) {
   const checks = useWebsiteChecks();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
@@ -156,6 +159,7 @@ export function CompanyTable({
                     <tr className="border-b border-line-soft bg-recessed last:border-0">
                       <td colSpan={5} className="px-5 pb-5 pt-1">
                         <div className="neu-raised-sm rounded-lg border border-line-soft bg-raised p-4">
+                          {renderLeadDetails?.(company, "table")}
                           <LeadDetailsPanel
                             company={company}
                             details={details}
@@ -219,6 +223,7 @@ export function CompanyTable({
                 </div>
                 {open ? (
                   <div className="mt-4 border-t border-line-soft pt-4">
+                    {renderLeadDetails?.(company, "card")}
                     <LeadDetailsPanel company={company} details={details} opportunity={opportunity} analysis={analysis} />
                   </div>
                 ) : null}

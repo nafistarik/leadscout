@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BookmarkX, Download } from "lucide-react";
 import { CompanyTable } from "@/components/companies/company-table";
+import { LeadNotesEditor } from "@/components/saved-leads/lead-notes-editor";
 import { LeadStatusControl } from "@/components/saved-leads/lead-status-control";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -14,25 +15,29 @@ import { LEAD_STATUS_LABELS, LEAD_STATUSES } from "@/lib/lead-pipeline";
 import type { LeadStatus } from "@/lib/lead-pipeline";
 import { cn } from "@/lib/storage";
 
-type StatusFilter = LeadStatus | "all";
+type StatusFilter = LeadStatus | "all" | "due";
 
 /**
  * One-row status filter with a count per status; statuses with no leads
  * are hidden so the row stays short, except the one currently selected.
+ * "Follow-up due" cuts across statuses, so it sits right after "All".
  */
 function StatusFilterBar({
   value,
   counts,
   total,
+  due,
   onChange,
 }: {
   value: StatusFilter;
   counts: Record<LeadStatus, number>;
   total: number;
+  due: number;
   onChange: (next: StatusFilter) => void;
 }) {
   const options: { value: StatusFilter; label: string; count: number }[] = [
     { value: "all", label: "All", count: total },
+    ...(due > 0 || value === "due" ? [{ value: "due" as const, label: "Follow-up due", count: due }] : []),
     ...LEAD_STATUSES.filter((status) => counts[status] > 0 || status === value).map((status) => ({
       value: status,
       label: LEAD_STATUS_LABELS[status],
@@ -70,13 +75,20 @@ function StatusFilterBar({
 export function SavedLeadsSection() {
   const { records, storageAvailable, isCompanySaved, toggleCompany } = useSavedLeads();
   const checks = useWebsiteChecks();
-  const { entryFor, statusOf, setStatus } = useLeadPipeline();
+  const { entryFor, statusOf, setStatus, updateDetails, followUpDue } = useLeadPipeline();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const counts = Object.fromEntries(LEAD_STATUSES.map((status) => [status, 0])) as Record<LeadStatus, number>;
   for (const record of records) counts[statusOf(record.id)] += 1;
+  const dueCount = records.filter((record) => followUpDue(record.id)).length;
   const companies = records
-    .filter((record) => statusFilter === "all" || statusOf(record.id) === statusFilter)
+    .filter((record) =>
+      statusFilter === "all"
+        ? true
+        : statusFilter === "due"
+          ? followUpDue(record.id)
+          : statusOf(record.id) === statusFilter,
+    )
     .map((record) => record.company);
 
   function handleExport() {
@@ -134,10 +146,18 @@ export function SavedLeadsSection() {
         </Card>
       ) : (
         <div className="space-y-3">
-          <StatusFilterBar value={statusFilter} counts={counts} total={records.length} onChange={setStatusFilter} />
+          <StatusFilterBar
+            value={statusFilter}
+            counts={counts}
+            total={records.length}
+            due={dueCount}
+            onChange={setStatusFilter}
+          />
           {companies.length === 0 ? (
             <p className="text-sm text-ink2">
-              No saved leads are {statusFilter === "all" ? "here" : `marked “${LEAD_STATUS_LABELS[statusFilter]}”`} right now.
+              {statusFilter === "due"
+                ? "No follow-ups are due right now."
+                : `No saved leads are ${statusFilter === "all" ? "here" : `marked “${LEAD_STATUS_LABELS[statusFilter]}”`} right now.`}
             </p>
           ) : (
             <CompanyTable
@@ -150,7 +170,16 @@ export function SavedLeadsSection() {
                   idPrefix={`${layout}-${company.id}`}
                   companyName={company.name}
                   entry={entryFor(company.id)}
+                  followUpDue={followUpDue(company.id)}
                   onChange={(status, lostReason) => setStatus(company.id, status, lostReason)}
+                />
+              )}
+              renderLeadDetails={(company, layout) => (
+                <LeadNotesEditor
+                  key={`${company.id}:${entryFor(company.id)?.notes ?? ""}`}
+                  idPrefix={`${layout}-${company.id}`}
+                  entry={entryFor(company.id)}
+                  onChange={(patch) => updateDetails(company.id, patch)}
                 />
               )}
             />

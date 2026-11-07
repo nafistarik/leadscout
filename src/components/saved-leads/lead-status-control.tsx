@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { LEAD_STATUS_LABELS, LEAD_STATUSES, LOST_REASON_LABELS, LOST_REASONS } from "@/lib/lead-pipeline";
 import type { LeadPipelineEntry, LeadStatus, LostReason } from "@/lib/lead-pipeline";
@@ -13,22 +14,30 @@ const REASON_OPTIONS = LOST_REASONS.map((reason) => ({ value: reason, label: LOS
  *
  * @param idPrefix Keeps ids unique: the table and the mobile cards render
  *   the same lead at once.
+ * @param followUpDue Shows a "Follow-up due" badge when the date has arrived.
  * @param onChange Receives the new status and, for "lost", the reason.
  */
 export function LeadStatusControl({
   idPrefix,
   companyName,
   entry,
+  followUpDue,
   onChange,
 }: {
   idPrefix: string;
   companyName: string;
   entry: LeadPipelineEntry | undefined;
+  followUpDue: boolean;
   onChange: (status: LeadStatus, lostReason?: LostReason) => void;
 }) {
   const status = entry?.status ?? "new";
   return (
     <div className="flex flex-col items-end gap-1.5" aria-label={`Pipeline status for ${companyName}`} role="group">
+      {followUpDue ? (
+        <Badge tone="warning" title={`Follow-up date: ${entry?.followUpDate ?? ""}`}>
+          Follow-up due
+        </Badge>
+      ) : null}
       <Select
         id={`${idPrefix}-status`}
         value={status}
