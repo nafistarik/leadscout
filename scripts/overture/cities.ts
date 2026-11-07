@@ -19,9 +19,10 @@ export interface PreparedCity {
 
 export const PREPARED_CITIES: PreparedCity[] = [
   // Bangladesh. OSM has no city boundary for most of these, so Nominatim
-  // returns a ~35 km square around the centre; neighbours (Dhaka, Gazipur,
-  // Narayanganj) overlap.
-  { id: "dhaka", name: "Dhaka", country: "bd", bbox: [90.229, 23.604, 90.549, 23.924] },
+  // returns a ~35 km square around the centre. Dhaka, Gazipur and
+  // Narayanganj are set by hand instead so they share edges, never overlap.
+  // Dhaka: Amin Bazar to Purbachal, Postogola to Uttara (Tongi bridge).
+  { id: "dhaka", name: "Dhaka", country: "bd", bbox: [90.32, 23.69, 90.52, 23.895] },
   { id: "chattogram", name: "Chattogram", country: "bd", bbox: [91.674, 22.174, 91.994, 22.494] },
   { id: "sylhet", name: "Sylhet", country: "bd", bbox: [91.709, 24.739, 92.029, 25.059] },
   { id: "khulna", name: "Khulna", country: "bd", bbox: [89.404, 22.657, 89.724, 22.977] },
@@ -29,8 +30,10 @@ export const PREPARED_CITIES: PreparedCity[] = [
   { id: "barishal", name: "Barishal", country: "bd", bbox: [90.211, 22.545, 90.531, 22.865] },
   { id: "rangpur", name: "Rangpur", country: "bd", bbox: [89.156, 25.661, 89.322, 25.84] },
   { id: "mymensingh", name: "Mymensingh", country: "bd", bbox: [90.25, 24.588, 90.57, 24.908] },
-  { id: "gazipur", name: "Gazipur", country: "bd", bbox: [90.258, 23.84, 90.578, 24.16] },
-  { id: "narayanganj", name: "Narayanganj", country: "bd", bbox: [90.339, 23.464, 90.659, 23.784] },
+  // Gazipur: Tongi, Board Bazar, Joydebpur, Konabari.
+  { id: "gazipur", name: "Gazipur", country: "bd", bbox: [90.3, 23.895, 90.5, 24.1] },
+  // Narayanganj: Siddhirganj, Fatullah and the town.
+  { id: "narayanganj", name: "Narayanganj", country: "bd", bbox: [90.44, 23.55, 90.6, 23.69] },
   { id: "cumilla", name: "Cumilla", country: "bd", bbox: [91.021, 23.301, 91.341, 23.621] },
   // Set by hand: Nominatim returns the whole district. Town, airport and the
   // beach-hotel strip down to Inani (~465 km²).

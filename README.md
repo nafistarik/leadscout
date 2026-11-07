@@ -108,7 +108,7 @@ Single CSV export for the saved-leads collection (UTF-8 with BOM, RFC 4180 quoti
 
 ## Known limitations
 
-- Prepared cities use rectangular boxes, not real city borders: most Bangladesh boxes are ~35 km squares around the centre (Dhaka, Gazipur and Narayanganj overlap), and London's box reaches into Surrey. Overture data has some address-like names and closed places it does not mark as closed; most Meta-sourced places list a Facebook page, so they show as “Social page only”.
+- Prepared cities use rectangular boxes, not real city borders: most Bangladesh boxes are ~35 km squares around the centre (Dhaka, Gazipur and Narayanganj are hand-set to share edges without overlapping), and London's box reaches into Surrey. Overture data has some address-like names and closed places it does not mark as closed; most Meta-sourced places list a Facebook page, so they show as “Social page only”.
 - Live Overpass requests have **not been verified from every network** (sandboxed CI environments block `overpass-api.de`); Nominatim resolution is verified. Live search depends on public-service availability and community mapping coverage, which varies widely by area.
 - No automated browser (E2E) tests are committed — interaction behavior is covered by unit/integration tests.
 - Large result sets are capped for public-API friendliness.
