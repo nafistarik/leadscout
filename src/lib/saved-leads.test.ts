@@ -1,6 +1,26 @@
 import { describe, expect, test } from "bun:test";
-import { sanitizeRecords } from "@/lib/saved-leads";
+import { restoreRecordAt, sanitizeRecords } from "@/lib/saved-leads";
 import type { Company, SavedLeadRecord } from "@/types/company";
+
+describe("restoreRecordAt (Undo)", () => {
+  const lead = (id: string): SavedLeadRecord => ({ ...savedCompany(), id, savedAt: `2026-01-0${id}T00:00:00.000Z` });
+
+  test("puts the record back where it was, keeping its saved-at time", () => {
+    const next = restoreRecordAt([lead("1"), lead("3")], lead("2"), 1);
+    expect(next.map((record) => record.id)).toEqual(["1", "2", "3"]);
+    expect(next[1].savedAt).toBe("2026-01-02T00:00:00.000Z");
+  });
+
+  test("an index past the end appends, and a negative one prepends", () => {
+    expect(restoreRecordAt([lead("1")], lead("2"), 9).map((record) => record.id)).toEqual(["1", "2"]);
+    expect(restoreRecordAt([lead("1")], lead("2"), -3).map((record) => record.id)).toEqual(["2", "1"]);
+  });
+
+  test("does nothing when the lead was saved again meanwhile", () => {
+    const records = [lead("1"), lead("2")];
+    expect(restoreRecordAt(records, lead("2"), 0)).toBe(records);
+  });
+});
 
 function savedCompany(overrides: Partial<Company> = {}): SavedLeadRecord {
   return {

@@ -161,6 +161,15 @@ export function SearchClient() {
   const [filters, setFilters] = useState<LeadSearchFilters>(() => searchParamsToFilters(searchParams));
   const [sort, setSort] = useState<SortOrder>("provider");
   const autoRunFired = useRef(false);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const scrollAfterSearch = useRef(false);
+
+  // Scrolling is outside React: once a phone search settles, bring its results into view.
+  useEffect(() => {
+    if (status === "loading" || !scrollAfterSearch.current) return;
+    scrollAfterSearch.current = false;
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [status, error]);
 
   useEffect(() => {
     if (autoRunFired.current || searchParams.get(AUTO_RUN_PARAM) !== "1") return;
@@ -181,6 +190,13 @@ export function SearchClient() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     submitFilters({ ...filters });
+    // On a phone the form fills the screen and results land below the fold:
+    // bring the loading card into view so the search visibly started.
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // While loading the page is too short to scroll all the way; finish once results render.
+      scrollAfterSearch.current = true;
+    }
   }
 
   function submitFilters(snapshot: LeadSearchFilters) {
@@ -357,7 +373,7 @@ export function SearchClient() {
           </CardBody>
         </Card>
 
-        <div aria-live="polite">
+        <div ref={resultsRef} aria-live="polite" className="scroll-mt-20">
           {status === "loading" ? (
             <LoadingState live={submittedFilters !== null && isLiveCity(submittedFilters)} />
           ) : error ? (
@@ -440,7 +456,7 @@ export function SearchClient() {
                 {meta.truncated ? (
                   <p className="text-xs leading-relaxed text-ink3">
                     {meta.providerId === "overture"
-                      ? `Showing the best ${displayed.length} of ${meta.examined.toLocaleString("en")} matches — businesses without a website come first. Raise Maximum results or add a keyword to see others.`
+                      ? `Showing the best ${displayed.length} of ${meta.examined.toLocaleString("en")} matches — businesses without a website come first. ${submittedFilters?.keyword.trim() ? "Raise Maximum results to see others." : "Raise Maximum results or add a keyword to see others."}`
                       : "Server limit reached — more businesses may exist in this area."}
                   </p>
                 ) : null}

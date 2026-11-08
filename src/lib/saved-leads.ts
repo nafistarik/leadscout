@@ -58,4 +58,17 @@ export function serializeRecords(records: SavedLeadRecord[]): string {
   return JSON.stringify({ version: SAVED_LEADS_SCHEMA_VERSION, records });
 }
 
+/**
+ * Puts a removed record back at its old position (Undo).
+ *
+ * @param index Its position before removal; clamped to the list length.
+ * @returns The same list when the record is already there again.
+ */
+export function restoreRecordAt(records: SavedLeadRecord[], record: SavedLeadRecord, index: number): SavedLeadRecord[] {
+  if (records.some((existing) => existing.id === record.id)) return records;
+  const next = [...records];
+  next.splice(Math.max(0, Math.min(index, next.length)), 0, record);
+  return next;
+}
+
 export { companyRecord };

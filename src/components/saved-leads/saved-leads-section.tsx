@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { BookmarkX, Download } from "lucide-react";
+import { BookmarkX, Download, Undo2, X } from "lucide-react";
 import { CompanyTable } from "@/components/companies/company-table";
 import { LeadNotesEditor } from "@/components/saved-leads/lead-notes-editor";
 import { LeadPitchPanel } from "@/components/saved-leads/lead-pitch-panel";
@@ -15,6 +15,7 @@ import { useWebsiteChecks } from "@/hooks/use-website-analysis";
 import { downloadCsv, exportFilename, rowsToCsv, savedRecordsToRows } from "@/lib/csv";
 import { LEAD_STATUS_LABELS, LEAD_STATUSES } from "@/lib/lead-pipeline";
 import type { LeadStatus } from "@/lib/lead-pipeline";
+import type { Company, SavedLeadRecord } from "@/types/company";
 import { cn } from "@/lib/storage";
 
 type StatusFilter = LeadStatus | "all" | "due";
@@ -84,7 +85,15 @@ function StatusFilterBar({
  * contact details and website-check functionality as search results.
  */
 export function SavedLeadsSection() {
-  const { records, storageAvailable, isCompanySaved, toggleCompany } = useSavedLeads();
+  const { records, storageAvailable, isCompanySaved, toggleCompany, restoreRecord } = useSavedLeads();
+  // The last lead removed with the Saved toggle, so one click can bring it back.
+  const [removed, setRemoved] = useState<{ record: SavedLeadRecord; index: number } | null>(null);
+
+  function handleToggleSaved(company: Company) {
+    const index = records.findIndex((record) => record.id === company.id);
+    setRemoved(index >= 0 ? { record: records[index], index } : null);
+    toggleCompany(company);
+  }
   const checks = useWebsiteChecks();
   const { entryFor, statusOf, setStatus, updateDetails, markContacted, followUpDue } = useLeadPipeline();
   const searchParams = useSearchParams();
@@ -147,6 +156,27 @@ export function SavedLeadsSection() {
         </p>
       ) : null}
 
+      {removed ? (
+        <div role="status" className="flex flex-wrap items-center gap-2 rounded-lg bg-status-info-bg p-2 text-sm text-status-info-fg">
+          <span className="min-w-0 flex-1 truncate">Removed “{removed.record.company.name}” from saved leads.</span>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              restoreRecord(removed.record, removed.index);
+              setRemoved(null);
+            }}
+          >
+            <Undo2 className="h-3.5 w-3.5" aria-hidden="true" />
+            Undo
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setRemoved(null)} aria-label="Dismiss">
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </Button>
+        </div>
+      ) : null}
+
       {records.length === 0 ? (
         <Card>
           <CardBody className="flex flex-col items-center px-6 py-10 text-center">
@@ -155,7 +185,7 @@ export function SavedLeadsSection() {
             </div>
             <h3 className="text-base font-semibold text-ink">No saved leads yet</h3>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-ink2">
-              Save promising companies from the search results above — they will appear here.
+              Save promising companies from Find Companies — they will appear here.
             </p>
           </CardBody>
         </Card>
@@ -178,7 +208,7 @@ export function SavedLeadsSection() {
             <CompanyTable
               companies={companies}
               isSaved={isCompanySaved}
-              onToggleSaved={toggleCompany}
+              onToggleSaved={handleToggleSaved}
               caption="Saved leads"
               renderLeadActions={(company, layout) => (
                 <LeadStatusControl

@@ -11,10 +11,6 @@ export const metadata: Metadata = {
 export default function SavedLeadsPage() {
   return (
     <div className="space-y-8">
-      <p className="max-w-3xl text-sm leading-relaxed text-ink2">
-        Businesses you saved from search results, with their contact details and website checks.
-        Saved leads stay in this browser after a refresh.
-      </p>
       {/* The section reads ?status= (links from the Dashboard), which needs a Suspense boundary. */}
       <Suspense fallback={<p className="text-sm text-ink3">Loading saved leads…</p>}>
         <SavedLeadsSection />

@@ -85,8 +85,9 @@ export function CompanyTable({
 
   return (
     <div>
-      {/* Desktop table */}
-      <div className="neu-raised hidden overflow-x-auto rounded-xl border border-line-soft bg-raised md:block">
+      {/* Desktop table from xl: below that the 880px table beside the 256px
+        sidebar scrolls sideways and cuts the details panel, so cards are used. */}
+      <div className="neu-raised hidden overflow-x-auto rounded-xl border border-line-soft bg-raised xl:block">
         <table className="w-full min-w-[880px] border-collapse text-left text-sm">
           {caption ? <caption className="sr-only">{caption}</caption> : null}
           <thead>
@@ -177,8 +178,8 @@ export function CompanyTable({
         </table>
       </div>
 
-      {/* Mobile cards */}
-      <ul className="space-y-3 md:hidden">
+      {/* Cards on phones, tablets and small laptops */}
+      <ul className="space-y-3 xl:hidden">
         {companies.map((company) => {
           const saved = isSaved(company.id);
           const open = expanded.has(company.id);

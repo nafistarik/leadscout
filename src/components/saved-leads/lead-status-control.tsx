@@ -32,8 +32,8 @@ export function LeadStatusControl({
 }) {
   const status = entry?.status ?? "new";
   return (
-    // Right-aligned in the desktop table's action column, left-aligned on mobile cards.
-    <div className="flex flex-col items-start gap-1.5 md:items-end" aria-label={`Pipeline status for ${companyName}`} role="group">
+    // Right-aligned in the desktop table's action column, left-aligned on cards.
+    <div className="flex flex-col items-start gap-1.5 xl:items-end" aria-label={`Pipeline status for ${companyName}`} role="group">
       {followUpDue ? (
         <Badge tone="warning" title={`Follow-up date: ${entry?.followUpDate ?? ""}`}>
           Follow-up due

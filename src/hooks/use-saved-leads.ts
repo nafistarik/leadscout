@@ -2,7 +2,7 @@ import { useCallback, useState, useSyncExternalStore } from "react";
 import type { Company, SavedLeadRecord } from "@/types/company";
 import { companyRecord } from "@/types/company";
 import { STORAGE_KEYS, readLocalStorage, safeJsonParse, writeLocalStorage } from "@/lib/storage";
-import { sanitizeRecords, serializeRecords } from "@/lib/saved-leads";
+import { restoreRecordAt, sanitizeRecords, serializeRecords } from "@/lib/saved-leads";
 import {
   notifyStorageChanged,
   probeStorage,
@@ -93,10 +93,25 @@ export function useSavedLeads() {
     [records, setRecords],
   );
 
+  /**
+   * Puts back a lead removed by mistake at its old position, with its
+   * original saved-at time. Does nothing if it was saved again meanwhile.
+   *
+   * @param index Where it sat in the list before removal.
+   */
+  const restoreRecord = useCallback(
+    (record: SavedLeadRecord, index: number) => {
+      const next = restoreRecordAt(records, record, index);
+      if (next !== records) setRecords(next);
+    },
+    [records, setRecords],
+  );
+
   return {
     records,
     storageAvailable,
     isCompanySaved,
     toggleCompany,
+    restoreRecord,
   };
 }
