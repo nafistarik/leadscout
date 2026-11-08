@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { viewportFit: "cover" };
 
 function ThemeInitScript() {
-  const script = `(function(){try{var raw=localStorage.getItem("leadscout.theme.v1");var theme=raw?JSON.parse(raw):"dark";if(theme==="light"){document.documentElement.classList.remove("dark");}}catch(e){}})();`;
+  const script = `(function(){try{var raw=localStorage.getItem("leadscout.theme.v1");var theme=raw?JSON.parse(raw):"dark";if(theme==="light"){document.documentElement.classList.remove("dark");}}catch(e){}window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__leadscoutInstall=e;});})();`;
   return <script dangerouslySetInnerHTML={{ __html: script }} suppressHydrationWarning />;
 }
 

@@ -11,6 +11,8 @@ export const STORAGE_KEYS = {
   /** The user's own name and portfolio link, appended to pitch messages. */
   pitchSignature: "leadscout.pitchSignature.v1",
   theme: "leadscout.theme.v1",
+  /** When the user last closed the install popup (ms since epoch). */
+  installDismissed: "leadscout.installDismissed.v1",
   /** Nominatim geocode cache (query key -> area + timestamp). */
   geocodeCache: "leadscout.geocodeCache.v1",
   /** Search history: recent submitted search criteria only (no results). */

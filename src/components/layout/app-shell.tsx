@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
+import { InstallPrompt } from "@/components/layout/install-prompt";
 import { CONTAINER_CLASS } from "@/components/layout/container";
 import { SidebarContent } from "@/components/layout/sidebar";
 import { OsmAttribution } from "@/components/osm-attribution";
@@ -43,6 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <BottomNav pathname={pathname} />
+      <InstallPrompt />
     </div>
   );
 }
