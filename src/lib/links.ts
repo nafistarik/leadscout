@@ -62,3 +62,25 @@ export function isPlausibleEmail(email: string | null | undefined): boolean {
   if (!local || !domain || !domain.includes(".")) return false;
   return true;
 }
+
+/**
+ * Free mailbox providers: an address on one of these says nothing about the
+ * business having a site. Matched on the first domain label, so regional
+ * variants (yahoo.co.uk, hotmail.fr) count too.
+ */
+const FREE_MAIL_PROVIDER =
+  /^(gmail|googlemail|yahoo|ymail|rocketmail|hotmail|outlook|live|msn|icloud|me|mac|aol|proton|protonmail|pm|gmx|yandex|mail|zoho|rediffmail|web|qq|163|126)\./i;
+
+/**
+ * The website a business email most likely belongs to: hello@smile.co.uk
+ * points at https://smile.co.uk. A hint for the user to check, never stored
+ * as the business's website.
+ *
+ * @returns null for a free mailbox (gmail, yahoo, …) or an implausible address.
+ */
+export function websiteFromEmail(email: string): string | null {
+  if (!isPlausibleEmail(email)) return null;
+  const domain = email.trim().split("@")[1].toLowerCase().replace(/\.$/, "");
+  if (FREE_MAIL_PROVIDER.test(domain) || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) return null;
+  return `https://${domain}`;
+}

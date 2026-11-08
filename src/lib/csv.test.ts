@@ -81,6 +81,37 @@ describe("savedRecordsToRows", () => {
     const rows = savedRecordsToRows([record({ company: company({ website: null }) })]);
     expect(rows[0].pitchOpportunity).toContain("high");
   });
+
+  test("exports the pipeline: labelled status, lost reason, follow-up, contacts, notes", () => {
+    const rows = savedRecordsToRows([record()], undefined, () => ({
+      status: "lost",
+      lostReason: "no-budget",
+      followUpDate: "2026-11-20",
+      contactCount: 2,
+      lastContactedAt: "2026-11-08T10:00:00.000Z",
+      notes: "Asked for a quote",
+    }));
+    const { status, lostReason, followUpDate, timesContacted, lastContactedAt, notes } = rows[0];
+    expect({ status, lostReason, followUpDate, timesContacted, lastContactedAt, notes }).toEqual({
+      status: "Lost",
+      lostReason: "No budget",
+      followUpDate: "2026-11-20",
+      timesContacted: "2",
+      lastContactedAt: "2026-11-08T10:00:00.000Z",
+      notes: "Asked for a quote",
+    });
+  });
+
+  test("a lead with no pipeline history exports as New with blank pipeline fields", () => {
+    const row = savedRecordsToRows([record()], undefined, () => undefined)[0];
+    expect([row.status, row.lostReason, row.followUpDate, row.timesContacted, row.notes]).toEqual(["New", "", "", "", ""]);
+  });
+
+  test("pipeline columns sit after Saved at, and a formula-like note is neutralized", () => {
+    const csv = rowsToCsv(savedRecordsToRows([record()], undefined, () => ({ notes: "=1+1" })));
+    expect(csv).toContain("Saved at,Status,Lost reason,Follow-up date,Times contacted,Last contacted at,Notes,Pitch opportunity");
+    expect(csv).toContain(",New,,,,,'=1+1,");
+  });
 });
 
 describe("exportFilename", () => {
@@ -112,7 +143,9 @@ describe("companyToRow", () => {
     const csv = rowsToCsv([]);
     const header = csv.trim();
     expect(header.startsWith("Name,Category,City")).toBe(true);
-    expect(header).toContain("Saved at,Pitch opportunity,Opportunity reasons,");
+    expect(header).toContain(
+      "Saved at,Status,Lost reason,Follow-up date,Times contacted,Last contacted at,Notes,Pitch opportunity,Opportunity reasons,",
+    );
     expect(header.endsWith("Emails on website,Phones on website,Socials on website,Website checked at")).toBe(true);
   });
 });

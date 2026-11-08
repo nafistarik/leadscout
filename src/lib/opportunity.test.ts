@@ -80,6 +80,22 @@ describe("computeOpportunity", () => {
     expect(unreachable.reasons.join(" ")).toContain("No phone, email, or social");
   });
 
+  test("a social page plus a business-domain email means a website is likely, not missing", () => {
+    const lead = company(
+      { website: "https://www.facebook.com/smilewell" },
+      { email: "hello@smilewelldental.co.uk", phone: "+442087060060" },
+    );
+    const opportunity = computeOpportunity(lead, describeOsmDetails(lead), null);
+    expect(opportunity.level).toBe("unknown");
+    expect(opportunity.label).toBe("Website likely");
+    expect(opportunity.reasons.join(" ")).toContain("smilewelldental.co.uk");
+  });
+
+  test("a free-mailbox email keeps a social-only lead high", () => {
+    const lead = company({ website: "https://www.facebook.com/x" }, { email: "x@gmail.com" });
+    expect(computeOpportunity(lead, describeOsmDetails(lead), null).level).toBe("high");
+  });
+
   test("chains are low priority even without a website", () => {
     const chain = company({}, { brand: "KFC", "brand:wikidata": "Q524757" });
     expect(computeOpportunity(chain, describeOsmDetails(chain), null).level).toBe("low");

@@ -1,5 +1,5 @@
 import type { Company } from "@/types/company";
-import { isPlausibleEmail, normalizeWebsiteUrl } from "@/lib/links";
+import { isPlausibleEmail, normalizeWebsiteUrl, websiteFromEmail } from "@/lib/links";
 
 /**
  * Extra pitch-relevant details read from a record's raw OpenStreetMap tags:
@@ -49,6 +49,12 @@ export interface OsmDetails {
   /** Date a mapper last verified the record (check_date / survey:date). */
   lastChecked: string | null;
   websiteKind: WebsiteKind;
+  /**
+   * When no real site is listed but an email uses the business's own domain,
+   * that domain's address: the business very likely has a website the map
+   * data missed. A hint only; never treated as the listed website.
+   */
+  likelyWebsite: string | null;
 }
 
 const SOCIAL_HOSTS: Array<{ pattern: RegExp; network: SocialNetwork }> = [
@@ -203,5 +209,7 @@ export function describeOsmDetails(company: Company): OsmDetails {
     description: tags.description?.trim() || null,
     lastChecked: tags.check_date?.trim() || tags["survey:date"]?.trim() || tags["check_date:opening_hours"]?.trim() || null,
     websiteKind,
+    likelyWebsite:
+      websiteKind === "site" ? null : (emails.map(websiteFromEmail).find((site) => site !== null) ?? null),
   };
 }

@@ -1,4 +1,6 @@
 import type { Company, SavedLeadRecord } from "@/types/company";
+import { effectiveStatus, LEAD_STATUS_LABELS, LOST_REASON_LABELS } from "@/lib/lead-pipeline";
+import type { LeadPipelineEntry } from "@/lib/lead-pipeline";
 import { normalizeWebsiteUrl } from "@/lib/links";
 import { computeOpportunity } from "@/lib/opportunity";
 import { describeOsmDetails, SOCIAL_LABELS } from "@/lib/osm-details";
@@ -27,6 +29,12 @@ export const CSV_COLUMNS = [
   "Source",
   "Source URL",
   "Saved at",
+  "Status",
+  "Lost reason",
+  "Follow-up date",
+  "Times contacted",
+  "Last contacted at",
+  "Notes",
   "Pitch opportunity",
   "Opportunity reasons",
   "Address",
@@ -59,6 +67,12 @@ export interface CsvRow {
   source: string;
   sourceUrl: string;
   savedAt: string;
+  status: string;
+  lostReason: string;
+  followUpDate: string;
+  timesContacted: string;
+  lastContactedAt: string;
+  notes: string;
   pitchOpportunity: string;
   opportunityReasons: string;
   address: string;
@@ -81,10 +95,17 @@ function yesNo(value: boolean | null): string {
   return value === null ? "" : value ? "yes" : "no";
 }
 
+/**
+ * One export row for a lead.
+ *
+ * @param pipeline The user's status, notes and follow-up for a saved lead;
+ *   omitted for a lead with no pipeline history (exports as "New").
+ */
 export function companyToRow(
   company: Company,
   savedAt: string,
   analysis: WebsiteAnalysis | null = null,
+  pipeline?: LeadPipelineEntry,
 ): CsvRow {
   const details = describeOsmDetails(company);
   const opportunity = computeOpportunity(company, details, analysis);
@@ -104,6 +125,12 @@ export function companyToRow(
     source: company.source,
     sourceUrl: company.sourceUrl ?? "",
     savedAt,
+    status: LEAD_STATUS_LABELS[effectiveStatus(pipeline)],
+    lostReason: pipeline?.lostReason ? LOST_REASON_LABELS[pipeline.lostReason] : "",
+    followUpDate: pipeline?.followUpDate ?? "",
+    timesContacted: pipeline?.contactCount ? String(pipeline.contactCount) : "",
+    lastContactedAt: pipeline?.lastContactedAt ?? "",
+    notes: pipeline?.notes ?? "",
     pitchOpportunity: `${opportunity.level} — ${opportunity.label}`,
     opportunityReasons: opportunity.reasons.join(" | "),
     address: details.address ?? "",
@@ -126,9 +153,10 @@ export function companyToRow(
 export function savedRecordsToRows(
   records: SavedLeadRecord[],
   getAnalysis?: (company: Company) => WebsiteAnalysis | null,
+  getPipeline?: (recordId: string) => LeadPipelineEntry | undefined,
 ): CsvRow[] {
   return records.map((record) =>
-    companyToRow(record.company, record.savedAt, getAnalysis?.(record.company) ?? null),
+    companyToRow(record.company, record.savedAt, getAnalysis?.(record.company) ?? null, getPipeline?.(record.id)),
   );
 }
 
@@ -166,6 +194,12 @@ export function rowsToCsv(rows: CsvRow[]): string {
         row.source,
         row.sourceUrl,
         row.savedAt,
+        row.status,
+        row.lostReason,
+        row.followUpDate,
+        row.timesContacted,
+        row.lastContactedAt,
+        row.notes,
         row.pitchOpportunity,
         row.opportunityReasons,
         row.address,

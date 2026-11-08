@@ -43,11 +43,19 @@ Three primary pages with a sidebar (plus mobile drawer) and a header carrying th
 | --- | --- |
 | `/` | Dashboard: introduction, four genuine statistics, Recent Searches |
 | `/find-companies` | Company search (prepared Overture data or live OpenStreetMap), results table, website checks, saving |
-| `/saved-leads` | All saved real businesses with contacts, website checks, CSV export, plus Recent Searches |
+| `/saved-leads` | All saved real businesses with the lead pipeline (status, notes, follow-ups, pitch message), contacts, website checks, CSV export, plus Recent Searches |
 
 Header, main content, and footer share one container (`CONTAINER_CLASS`) so their edges align on every page. The sidebar holds the three destinations plus a Clear-local-data action anchored at the bottom; the header carries the logo and a compact theme switch (track + thumb, no text labels).
 
-There is no Lists or Settings page, no demo data, and no CRM workflow.
+There is no Lists or Settings page and no demo data.
+
+## Lead pipeline (Saved Leads)
+
+A personal tracker: LeadScout cannot see your WhatsApp or inbox, so every change is an explicit user action (`src/lib/lead-pipeline.ts`).
+
+- **Status** per lead: New → Contacted → Replied → Proposal sent → Won / Lost, or Not a fit. Lost takes an optional reason (no budget, not interested, never replied, already has a website, other). A filter row above the table counts each status.
+- **Notes and follow-up date** in the lead's details panel. Once the date arrives, an open lead shows “Follow-up due” and appears under that filter; Won, Lost and Not a fit never do.
+- **Pitch message** (`src/lib/pitch.ts`) built only from what was found: no website, a social page only, or the top website-check issues. Bangla for Bangladeshi leads, English otherwise, switchable and editable. Your name and portfolio link are entered once. WhatsApp (`wa.me`, needs an international number; Bangladeshi `01…` mobiles are converted), Email (`mailto:`) and Copy open your own app; afterwards LeadScout asks “Did you send it?” and only then counts the contact and moves a New lead to Contacted.
 
 ## Search workflow
 
@@ -77,11 +85,13 @@ The output folder is git-ignored. To refresh data, set the new Overture release 
 Stored in `localStorage` under versioned `leadscout.*` keys (see `STORAGE_KEYS` in `src/lib/storage.ts`):
 
 - Saved real-company snapshots (v2 envelope; legacy non-company records are dropped by validation)
+- Lead pipeline per saved lead (status, lost reason, notes, follow-up date, contact count), kept apart from the snapshots so unsaving and re-saving keeps the history
+- Your pitch signature (name and portfolio link)
 - Recent search criteria plus lightweight result statistics (result counts and website ids only, never full result sets) — the single source of truth for both Recent Searches and the Dashboard statistics
 - Website-check cache (14 days) and Nominatim geocode cache
 - Theme preference
 
-All data is **browser-local**: it does not sync across devices and is lost if browser storage is cleared. Corrupt entries are dropped by validation rather than crashing pages. Cross-tab updates propagate through storage events. The sidebar's Clear-local-data action clears saved leads, recent searches, and search statistics after confirmation; theme preference and caches are kept.
+All data is **browser-local**: it does not sync across devices and is lost if browser storage is cleared. Corrupt entries are dropped by validation rather than crashing pages. Cross-tab updates propagate through storage events. The sidebar's Clear-local-data action clears saved leads with their pipeline, recent searches, and search statistics after confirmation; theme preference, pitch signature and caches are kept.
 
 ## Dashboard statistics
 
@@ -96,7 +106,7 @@ Searches recorded before statistics existed load as zero — history is never in
 
 ## Export
 
-Single CSV export for the saved-leads collection (UTF-8 with BOM, RFC 4180 quoting, formula-injection guard, temporary download URLs revoked after use): identity, contacts, coordinates, source, saved-at, pitch opportunity, address, and website-check columns. Filename: `leadscout-leads-YYYYMMDD-HHmm.csv`. Missing values export as blank fields. Nothing is ever sent to an external service.
+Single CSV export for the saved-leads collection (UTF-8 with BOM, RFC 4180 quoting, formula-injection guard, temporary download URLs revoked after use): identity, contacts, coordinates, source, saved-at, pipeline (status, lost reason, follow-up date, times contacted, last contacted at, notes), pitch opportunity, address, and website-check columns. Filename: `leadscout-leads-YYYYMMDD-HHmm.csv`. Missing values export as blank fields. Nothing is ever sent to an external service.
 
 ## Troubleshooting
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { describeOsmDetails } from "@/lib/osm-details";
-import { buildPitch, mailtoLink, pitchLanguageFor, sanitizeSignature, whatsappLink } from "@/lib/pitch";
+import { buildPitch, mailtoLink, pitchLanguageFor, sanitizeSignature, shortBusinessName, whatsappLink } from "@/lib/pitch";
 import type { WebsiteAnalysis } from "@/lib/website-analysis";
 import type { Company } from "@/types/company";
 
@@ -119,7 +119,7 @@ describe("buildPitch", () => {
 describe("whatsappLink", () => {
   test("uses the international number and encodes the text", () => {
     expect(whatsappLink("+880 1711-000000", "Hi & bye")).toBe("https://wa.me/8801711000000?text=Hi%20%26%20bye");
-    expect(whatsappLink("0044 20 7946 0000", "x")).toBe("https://wa.me/442079460000?text=x");
+    expect(whatsappLink("0044 7700 900123", "x")).toBe("https://wa.me/447700900123?text=x");
   });
 
   test("turns a Bangladeshi local mobile into +880", () => {
@@ -129,6 +129,52 @@ describe("whatsappLink", () => {
   test("refuses a local number without a country code, and junk", () => {
     expect(whatsappLink("020 7946 0000", "x")).toBeNull();
     expect(whatsappLink("+12", "x")).toBeNull();
+  });
+
+  test("refuses known landlines, which cannot use WhatsApp", () => {
+    expect(whatsappLink("+44 20 8706 0060", "x")).toBeNull();
+    expect(whatsappLink("+880 2 9661000", "x")).toBeNull();
+    expect(whatsappLink("+971 4 123 4567", "x")).toBeNull();
+    expect(whatsappLink("+971 50 123 4567", "x")).toBe("https://wa.me/971501234567?text=x");
+  });
+
+  test("lets through countries whose mobiles cannot be told apart", () => {
+    expect(whatsappLink("+1 512 555 0100", "x")).toBe("https://wa.me/15125550100?text=x");
+  });
+});
+
+describe("shortBusinessName", () => {
+  test("drops SEO tails after a dash, pipe or colon", () => {
+    expect(shortBusinessName("Smilewell Dental - Dental Implants | Cosmetic Dentist")).toBe("Smilewell Dental");
+    expect(shortBusinessName("Post House Dental | Invisalign Weybridge")).toBe("Post House Dental");
+    expect(shortBusinessName("Izumi: Japanese Kitchen")).toBe("Izumi");
+  });
+
+  test("keeps names whose dash is part of the name", () => {
+    expect(shortBusinessName("Tri-Dent Dental Bd.")).toBe("Tri-Dent Dental Bd.");
+    expect(shortBusinessName("Coca-Cola Store")).toBe("Coca-Cola Store");
+  });
+});
+
+describe("likely website from the email domain", () => {
+  test("never claims there is no website, and greets by the short name", () => {
+    const lead = company(
+      { name: "Smilewell Dental - Dental Implants | Cosmetic Dentist", website: "https://www.facebook.com/smilewell" },
+      { email: "hello@smilewelldental.co.uk" },
+    );
+    const details = describeOsmDetails(lead);
+    expect(details.likelyWebsite).toBe("https://smilewelldental.co.uk");
+    const pitch = buildPitch(lead, details, null, SIGNED, "en");
+    expect(pitch.subject).toBe("A website for Smilewell Dental");
+    expect(pitch.body.startsWith("Hi Smilewell Dental team,")).toBe(true);
+    expect(pitch.body).toContain("help your website bring in more customers");
+    expect(pitch.body).not.toContain("instead of a website");
+  });
+
+  test("a free mailbox is no evidence of a website", () => {
+    const lead = company({}, { email: "smilewell@gmail.com" });
+    expect(describeOsmDetails(lead).likelyWebsite).toBeNull();
+    expect(buildPitch(lead, describeOsmDetails(lead), null, SIGNED, "en").body).toContain("don't have a website yet");
   });
 });
 

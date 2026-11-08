@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Mail, MessageCircle } from "lucide-react";
+import { Copy, Mail, MessageCircle, Phone } from "lucide-react";
 import { Button, buttonClassName } from "@/components/ui/button";
 import { TextArea, TextInput } from "@/components/ui/field";
 import { useLocalStorageValue } from "@/hooks/use-local-storage-value";
 import { useWebsiteChecks } from "@/hooks/use-website-analysis";
+import { phoneHref } from "@/lib/links";
 import { describeOsmDetails } from "@/lib/osm-details";
 import { buildPitch, mailtoLink, pitchLanguageFor, sanitizeSignature, whatsappLink } from "@/lib/pitch";
 import type { PitchLanguage, PitchSignature } from "@/lib/pitch";
@@ -98,6 +99,8 @@ export function LeadPitchPanel({
   if (draft.base !== pitch.body) setDraft({ base: pitch.body, text: pitch.body });
 
   const whatsapp = phones.map((phone) => whatsappLink(phone, text)).find((link) => link !== null) ?? null;
+  // A landline cannot take WhatsApp; offer a call instead.
+  const call = whatsapp ? null : (phones.map(phoneHref).find((link) => link !== null) ?? null);
   const email = emails.map((address) => mailtoLink(address, { subject: pitch.subject, body: text })).find(Boolean) ?? null;
   const messageId = `${idPrefix}-pitch`;
 
@@ -141,6 +144,12 @@ export function LeadPitchPanel({
       <SignatureFields idPrefix={idPrefix} signature={signature} onChange={setSignature} />
 
       <TextArea id={messageId} value={text} onChange={(event) => setDraft({ base: pitch.body, text: event.target.value })} rows={9} />
+      {details.likelyWebsite ? (
+        <p className="text-[11px] text-status-warning-fg">
+          Their email suggests a website at {details.likelyWebsite.replace(/^https:\/\//, "")}. Open it before sending,
+          and edit the message if it is already good.
+        </p>
+      ) : null}
       {site && !analysis ? (
         <p className="text-[11px] text-ink3">Run “Check site” first to mention what is wrong with their website.</p>
       ) : null}
@@ -150,6 +159,12 @@ export function LeadPitchPanel({
           <a href={whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => setAskSent(true)} className={buttonClassName("primary", "sm")}>
             <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
             WhatsApp
+          </a>
+        ) : null}
+        {call ? (
+          <a href={call} onClick={() => setAskSent(true)} className={buttonClassName("secondary", "sm")}>
+            <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+            Call
           </a>
         ) : null}
         {email ? (
@@ -162,8 +177,8 @@ export function LeadPitchPanel({
           <Copy className="h-3.5 w-3.5" aria-hidden="true" />
           Copy
         </Button>
-        {!whatsapp && !email ? (
-          <span className="text-[11px] text-ink3">No WhatsApp-ready number or email known; copy the message instead.</span>
+        {!whatsapp && !call && !email ? (
+          <span className="text-[11px] text-ink3">No phone or email known; copy the message instead.</span>
         ) : null}
       </div>
       {copyNote ? <p className="text-[11px] text-ink2">{copyNote}</p> : null}

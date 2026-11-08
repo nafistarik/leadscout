@@ -93,7 +93,7 @@ export function SavedLeadsSection() {
     .map((record) => record.company);
 
   function handleExport() {
-    const rows = savedRecordsToRows(records, (company) => checks.analysisFor(company.website));
+    const rows = savedRecordsToRows(records, (company) => checks.analysisFor(company.website), entryFor);
     downloadCsv(rowsToCsv(rows), exportFilename(new Date()));
   }
 

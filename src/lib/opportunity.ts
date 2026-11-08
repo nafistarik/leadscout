@@ -53,10 +53,18 @@ export function computeOpportunity(
     level = "low";
     label = "Chain / brand";
     reasons.push(`Tagged as part of the “${details.brand}” brand — usually has a central website.`);
+  } else if (details.websiteKind !== "site" && details.likelyWebsite) {
+    // Map data often lists only a Facebook page while the business email
+    // (hello@their-domain) shows a real site exists; pitching "you have no
+    // website" to them would be wrong.
+    level = "unknown";
+    label = "Website likely";
+    const domain = details.likelyWebsite.replace(/^https:\/\//, "");
+    reasons.push(`No website listed, but their email uses ${domain} — they most likely have a site there. Open it before pitching.`);
   } else if (details.websiteKind === "none") {
     level = "high";
     label = "No website";
-    reasons.push("No website listed in OpenStreetMap — confirm with a quick web search.");
+    reasons.push("No website listed in the map data — confirm with a quick web search.");
   } else if (details.websiteKind === "social") {
     level = "high";
     label = "Social page only";

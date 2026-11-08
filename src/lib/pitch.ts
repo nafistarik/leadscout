@@ -77,6 +77,12 @@ function issuePhrase(key: string, analysis: WebsiteAnalysis, language: PitchLang
 
 /** The sentence that says why this business is worth a website. */
 function findingSentence(details: OsmDetails, analysis: WebsiteAnalysis | null, language: PitchLanguage): string {
+  // Their own email domain means a site most likely exists: never claim they have none.
+  if (details.websiteKind !== "site" && details.likelyWebsite) {
+    return language === "bn"
+      ? "আপনাদের অনলাইন উপস্থিতি দেখলাম, আর আপনাদের ওয়েবসাইটকে আরও কাস্টমার আনার মতো করে তোলার কিছু আইডিয়া আছে।"
+      : "I had a look at your online presence and have a few ideas to help your website bring in more customers.";
+  }
   if (details.websiteKind === "none") {
     return language === "bn"
       ? "দেখলাম আপনাদের কোনো ওয়েবসাইট নেই, ফলে Google-এ খুঁজে নতুন কাস্টমাররা সহজে আপনাদের তথ্য পান না।"
@@ -109,6 +115,16 @@ function findingSentence(details: OsmDetails, analysis: WebsiteAnalysis | null, 
 }
 
 /**
+ * The name to address a business by: map listings often carry SEO tails
+ * ("Smile Dental - Dental Implants | Cosmetic Dentist"), so only the part
+ * before the first " - ", " | ", " – ", " — " or ": " is used.
+ */
+export function shortBusinessName(name: string): string {
+  const short = name.split(/\s+[-–—|]\s+|\s*\|\s*|:\s+/)[0].trim();
+  return short.length >= 2 ? short : name.trim();
+}
+
+/**
  * Builds the pitch for one lead.
  *
  * @param analysis The website check, when one was run.
@@ -125,11 +141,12 @@ export function buildPitch(
   const sender = signature.name || NAME_PLACEHOLDER[language];
   const closing = [sender, signature.link].filter(Boolean).join("\n");
   const finding = findingSentence(details, analysis, language);
+  const name = shortBusinessName(company.name);
   if (language === "bn") {
     return {
-      subject: `${company.name}-এর জন্য একটি ওয়েবসাইট`,
+      subject: `${name}-এর জন্য একটি ওয়েবসাইট`,
       body: [
-        `হ্যালো ${company.name},`,
+        `হ্যালো ${name},`,
         "",
         `অনলাইনে আপনাদের খোঁজ পেলাম। ${finding}`,
         "",
@@ -143,11 +160,11 @@ export function buildPitch(
     };
   }
   return {
-    subject: `A website for ${company.name}`,
+    subject: `A website for ${name}`,
     body: [
-      `Hi ${company.name} team,`,
+      `Hi ${name} team,`,
       "",
-      `I came across ${company.name} online. ${finding}`,
+      `I came across ${name} online. ${finding}`,
       "",
       "I build fast, mobile-friendly websites for small businesses, and I'd be happy to show you a free mock-up of what yours could look like.",
       "",
@@ -160,11 +177,30 @@ export function buildPitch(
 }
 
 /**
+ * Mobile number prefixes for the prepared cities' countries. WhatsApp only
+ * runs on mobiles, and a landline (+44 20…, +880 2…) would open a dead
+ * chat. Countries not listed (and +1, where mobiles and landlines share
+ * prefixes) are allowed through.
+ */
+const MOBILE_PREFIXES: Array<[countryCode: string, mobile: RegExp]> = [
+  ["880", /^8801[3-9]/],
+  ["44", /^447/],
+  ["971", /^9715/],
+  ["60", /^601/],
+  ["61", /^614/],
+];
+
+function isLikelyMobile(digits: string): boolean {
+  const rule = MOBILE_PREFIXES.find(([countryCode]) => digits.startsWith(countryCode));
+  return !rule || rule[1].test(digits);
+}
+
+/**
  * A wa.me link that opens WhatsApp with the message ready to send.
  *
  * @returns null when the number has no country code and is not a
  *   Bangladeshi local mobile number (01XXXXXXXXX), since wa.me needs the
- *   full international number.
+ *   full international number, or when it is a known landline.
  */
 export function whatsappLink(phone: string, text: string): string | null {
   const dialable = phone.replace(/[^+\d]/g, "");
@@ -173,7 +209,7 @@ export function whatsappLink(phone: string, text: string): string | null {
   else if (dialable.startsWith("00")) digits = dialable.slice(2);
   else if (/^01\d{9}$/.test(dialable)) digits = `88${dialable}`;
   else return null;
-  if (!/^\d{8,15}$/.test(digits)) return null;
+  if (!/^\d{8,15}$/.test(digits) || !isLikelyMobile(digits)) return null;
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }
 

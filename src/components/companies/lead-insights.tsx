@@ -251,6 +251,12 @@ export function WebsiteCheckCell({
         <p className="text-xs text-ink3">
           {details.websiteKind === "none" ? "No website listed" : "Social page only — no site to check"}
         </p>
+        {details.likelyWebsite ? (
+          <p className="flex flex-wrap items-center gap-x-1 text-xs text-status-warning-fg">
+            Likely site (from email):
+            <ExternalTextLink href={details.likelyWebsite}>{details.likelyWebsite.replace(/^https:\/\//, "")}</ExternalTextLink>
+          </p>
+        ) : null}
         <p className="flex flex-wrap items-center gap-x-2 text-xs text-ink3">
           Verify:
           <ExternalTextLink href={search.href}>Google</ExternalTextLink>

@@ -4,7 +4,26 @@ import {
   normalizeWebsiteUrl,
   phoneHref,
   websiteDisplayLabel,
+  websiteFromEmail,
 } from "@/lib/links";
+
+describe("websiteFromEmail", () => {
+  test("a business domain points at its likely website", () => {
+    expect(websiteFromEmail(" hello@SmileWellDental.co.uk ")).toBe("https://smilewelldental.co.uk");
+    expect(websiteFromEmail("info@scplbd.com")).toBe("https://scplbd.com");
+  });
+
+  test("free mailboxes, including regional variants, are not evidence of a site", () => {
+    for (const email of ["a@gmail.com", "a@yahoo.co.uk", "a@hotmail.fr", "a@outlook.com", "a@icloud.com", "a@proton.me"]) {
+      expect(websiteFromEmail(email)).toBeNull();
+    }
+  });
+
+  test("an implausible address gives nothing", () => {
+    expect(websiteFromEmail("not an email")).toBeNull();
+    expect(websiteFromEmail("a@localhost")).toBeNull();
+  });
+});
 
 describe("normalizeWebsiteUrl", () => {
   test("keeps http/https URLs", () => {
