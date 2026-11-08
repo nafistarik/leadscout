@@ -45,6 +45,24 @@ function matchesQuery(option: SelectOption, query: string): boolean {
   return haystack.includes(needle);
 }
 
+/**
+ * Which filtered option Enter should pick for a typed query. The list keeps
+ * its grouped order, but a label match beats a group or keyword match:
+ * "Beauty" must land on "Beauty Salon", not on the first option that merely
+ * lists "beauty" as a keyword.
+ *
+ * @returns Index into `options`: the first label starting with the query,
+ *   else the first label containing it, else 0.
+ */
+export function bestMatchIndex(options: SelectOption[], query: string): number {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return 0;
+  const labels = options.map((option) => option.label.toLowerCase());
+  const startsWith = labels.findIndex((label) => label.startsWith(needle));
+  if (startsWith >= 0) return startsWith;
+  return Math.max(labels.findIndex((label) => label.includes(needle)), 0);
+}
+
 const TRIGGER_SIZES: Record<SelectSize, string> = {
   md: "h-10 px-3 text-sm",
   sm: "h-9 pl-2 text-[13px]",
@@ -244,8 +262,9 @@ export function Select({
           onFocus={openWithDraft}
           onClick={openWithDraft}
           onChange={(event) => {
-            setDraft(event.target.value);
-            setHighlight(0);
+            const query = event.target.value;
+            setDraft(query);
+            setHighlight(bestMatchIndex(options.filter((option) => matchesQuery(option, query)), query));
             setOpen(true);
           }}
           onKeyDown={handleSearchKeyDown}

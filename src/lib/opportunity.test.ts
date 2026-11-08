@@ -80,6 +80,30 @@ describe("computeOpportunity", () => {
     expect(unreachable.reasons.join(" ")).toContain("No phone, email, or social");
   });
 
+  test("within a level, easier-to-reach businesses rank first: phone+email, phone, email, social, none", () => {
+    const rankOf = (tags: Record<string, string>) => {
+      const lead = company({}, tags);
+      return computeOpportunity(lead, describeOsmDetails(lead), null).rank;
+    };
+    const ranks = [
+      rankOf({ phone: "+8801711000000", email: "a@gmail.com", "contact:facebook": "https://www.facebook.com/x" }),
+      rankOf({ phone: "+8801711000000", "contact:facebook": "https://www.facebook.com/x" }),
+      rankOf({ email: "a@gmail.com", "contact:facebook": "https://www.facebook.com/x" }),
+      rankOf({ "contact:facebook": "https://www.facebook.com/x" }),
+      rankOf({}),
+    ];
+    expect([...ranks].sort((a, b) => a - b)).toEqual(ranks);
+    expect(new Set(ranks).size).toBe(ranks.length);
+  });
+
+  test("the opportunity level still outranks reachability", () => {
+    const unreachableNoSite = company();
+    const reachableWithSite = company({ website: "https://cafe.example" }, { phone: "+8801711000000", email: "a@cafe.example" });
+    expect(computeOpportunity(unreachableNoSite, describeOsmDetails(unreachableNoSite), null).rank).toBeLessThan(
+      computeOpportunity(reachableWithSite, describeOsmDetails(reachableWithSite), null).rank,
+    );
+  });
+
   test("a social page plus a business-domain email means a website is likely, not missing", () => {
     const lead = company(
       { website: "https://www.facebook.com/smilewell" },

@@ -19,7 +19,7 @@ export interface Opportunity {
   level: OpportunityLevel;
   label: string;
   reasons: string[];
-  /** Sort key: lower is a better pitch target. */
+  /** Sort key: lower is a better pitch target (level, then how reachable). */
   rank: number;
   /** True when at least one way to reach the business is known. */
   contactable: boolean;
@@ -34,17 +34,29 @@ export const OPPORTUNITY_LEVEL_LABELS: Record<OpportunityLevel, string> = {
 
 const LEVEL_RANK: Record<OpportunityLevel, number> = { high: 0, medium: 1, unknown: 2, low: 3 };
 
+/**
+ * How directly the business can be reached, best first. A phone (call or
+ * WhatsApp) gets an answer fastest, email next; a Facebook page alone means
+ * messaging a page that is often unattended.
+ */
+const CONTACT_TIERS = 5;
+function contactTier(hasPhone: boolean, hasEmail: boolean, hasSocial: boolean): number {
+  if (hasPhone && hasEmail) return 0;
+  if (hasPhone) return 1;
+  if (hasEmail) return 2;
+  if (hasSocial) return 3;
+  return 4;
+}
+
 export function computeOpportunity(
   company: Company,
   details: OsmDetails,
   analysis: WebsiteAnalysis | null,
 ): Opportunity {
-  const contactable =
-    details.phones.length > 0 ||
-    details.emails.length > 0 ||
-    details.socials.length > 0 ||
-    (analysis?.emails.length ?? 0) > 0 ||
-    (analysis?.phones.length ?? 0) > 0;
+  const hasPhone = details.phones.length > 0 || (analysis?.phones.length ?? 0) > 0;
+  const hasEmail = details.emails.length > 0 || (analysis?.emails.length ?? 0) > 0;
+  const hasSocial = details.socials.length > 0;
+  const contactable = hasPhone || hasEmail || hasSocial;
   const reasons: string[] = [];
   let level: OpportunityLevel;
   let label: string;
@@ -106,7 +118,8 @@ export function computeOpportunity(
     level,
     label,
     reasons,
-    rank: LEVEL_RANK[level] * 2 + (contactable ? 0 : 1),
+    // Level first; within a level, the easier-to-reach business first.
+    rank: LEVEL_RANK[level] * CONTACT_TIERS + contactTier(hasPhone, hasEmail, hasSocial),
     contactable,
   };
 }
