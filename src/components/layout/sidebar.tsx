@@ -102,11 +102,12 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      <Link href="/" onClick={onNavigate} className="-mx-4 flex h-16 shrink-0 items-center border-b border-line px-7" aria-label="LeadScout home">
+      {/* Same height as the header, so the logo and the page title share one line without a divider. */}
+      <Link href="/" onClick={onNavigate} className="flex h-16 shrink-0 items-center px-3" aria-label="LeadScout home">
         <Wordmark className="h-[26px]" />
       </Link>
 
-      <nav aria-label="Primary" className="mt-6 flex-1">
+      <nav aria-label="Primary" className="mt-4 flex-1">
         <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-ink3">Menu</p>
         <ul className="enter-stagger space-y-1">
           {NAV_ITEMS.map((item) => {

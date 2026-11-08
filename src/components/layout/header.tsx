@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { Menu, Moon, Sun, X } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { CONTAINER_CLASS } from "@/components/layout/container";
+import { Wordmark } from "@/components/layout/sidebar";
 import { cn } from "@/lib/storage";
 
 /** Each page's title and one line on what it is for (the app is too shallow for a breadcrumb). */
@@ -69,9 +71,13 @@ export function Header({
           <Menu className="h-5 w-5" aria-hidden="true" />
         </button>
 
-        <div className="min-w-0 flex-1">
+        {/* Phones have no sidebar, so the header carries the logo; each page's own content names it. */}
+        <Link href="/" className="flex min-w-0 flex-1 items-center md:hidden" aria-label="LeadScout home">
+          <Wordmark className="h-[22px]" />
+        </Link>
+        <div className="sr-only min-w-0 flex-1 md:not-sr-only">
           <h1 className="truncate text-lg font-semibold leading-tight tracking-tight text-ink">{meta.title}</h1>
-          {meta.subtitle ? <p className="hidden truncate text-xs text-ink3 sm:block">{meta.subtitle}</p> : null}
+          {meta.subtitle ? <p className="truncate text-xs text-ink3">{meta.subtitle}</p> : null}
         </div>
 
         <ThemeSwitch />
