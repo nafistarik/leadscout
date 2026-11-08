@@ -14,7 +14,8 @@ export const NAV_ITEMS = [
   { href: "/saved-leads", label: "Saved Leads", icon: Bookmark },
 ] as const;
 
-function isActive(pathname: string, href: string): boolean {
+/** Whether a nav item is the current page (the Dashboard only on "/" itself). */
+export function isActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -25,7 +26,7 @@ function isActive(pathname: string, href: string): boolean {
  * statistics after explicit confirmation. Theme preference and
  * provider/website caches are kept.
  */
-function ClearLocalData() {
+export function ClearLocalData() {
   const [confirming, setConfirming] = useState(false);
 
   function handleClear() {
@@ -96,14 +97,14 @@ export function Wordmark({ className }: { className?: string }) {
   );
 }
 
-export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarContent() {
   const pathname = usePathname();
   const savedCount = useSavedLeads().records.length;
 
   return (
     <div className="flex h-full flex-col">
       {/* Same height as the header, so the logo and the page title share one line without a divider. */}
-      <Link href="/" onClick={onNavigate} className="flex h-16 shrink-0 items-center px-3" aria-label="LeadScout home">
+      <Link href="/" className="flex h-16 shrink-0 items-center px-3" aria-label="LeadScout home">
         <Wordmark className="h-[26px]" />
       </Link>
 
@@ -117,7 +118,6 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",

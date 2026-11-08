@@ -184,6 +184,8 @@ html {
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  /* Taps get the app's own pressed states, not the grey browser flash. */
+  -webkit-tap-highlight-color: transparent;
   background-color: var(--surface-app);
   color: var(--text-primary);
   /* Smooth, consistent light/dark theme transition (disabled under reduced-motion above) */

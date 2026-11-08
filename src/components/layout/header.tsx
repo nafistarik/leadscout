@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, Moon, Sun, X } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { CONTAINER_CLASS } from "@/components/layout/container";
 import { Wordmark } from "@/components/layout/sidebar";
@@ -50,32 +50,18 @@ function ThemeSwitch() {
   );
 }
 
-export function Header({
-  pathname,
-  onOpenMobileNav,
-}: {
-  pathname: string;
-  onOpenMobileNav: () => void;
-}) {
+export function Header({ pathname }: { pathname: string }) {
   const meta = TITLES[pathname] ?? { title: "LeadScout", subtitle: "" };
 
   return (
     <header className="enter-drop sticky top-0 z-20 border-b border-line bg-app/95 backdrop-blur">
       <div className={`${CONTAINER_CLASS} flex h-16 items-center gap-3`}>
-        <button
-          type="button"
-          onClick={onOpenMobileNav}
-          className="neu-raised-sm neu-pressable inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-line-soft bg-raised text-ink2 hover:bg-alt hover:text-ink md:hidden"
-          aria-label="Open navigation menu"
-        >
-          <Menu className="h-5 w-5" aria-hidden="true" />
-        </button>
 
-        {/* Phones have no sidebar, so the header carries the logo; each page's own content names it. */}
-        <Link href="/" className="flex min-w-0 flex-1 items-center md:hidden" aria-label="LeadScout home">
+        {/* Below lg there is no sidebar, so the top bar carries the logo; the tab bar and the page itself say where you are. */}
+        <Link href="/" className="flex min-w-0 flex-1 items-center lg:hidden" aria-label="LeadScout home">
           <Wordmark className="h-[22px]" />
         </Link>
-        <div className="sr-only min-w-0 flex-1 md:not-sr-only">
+        <div className="sr-only min-w-0 flex-1 lg:not-sr-only">
           <h1 className="truncate text-lg font-semibold leading-tight tracking-tight text-ink">{meta.title}</h1>
           {meta.subtitle ? <p className="truncate text-xs text-ink3">{meta.subtitle}</p> : null}
         </div>
@@ -83,18 +69,5 @@ export function Header({
         <ThemeSwitch />
       </div>
     </header>
-  );
-}
-
-export function MobileNavCloseButton({ onClose }: { onClose: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClose}
-      aria-label="Close navigation menu"
-      className="neu-raised-sm neu-pressable inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-line-soft bg-raised text-ink2 hover:bg-alt hover:text-ink"
-    >
-      <X className="h-5 w-5" aria-hidden="true" />
-    </button>
   );
 }

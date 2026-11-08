@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppShell } from "@/components/layout/app-shell";
 import { ThemeProvider } from "@/hooks/use-theme";
@@ -14,6 +14,10 @@ export const metadata: Metadata = {
   // iOS ignores most of the manifest; these make "Add to Home Screen" open full-screen with the right name.
   appleWebApp: { capable: true, title: "LeadScout", statusBarStyle: "black" },
 };
+
+// "cover" lets the installed app reach the screen edges on notched phones;
+// the tab bar pads itself with the safe-area inset instead.
+export const viewport: Viewport = { viewportFit: "cover" };
 
 function ThemeInitScript() {
   const script = `(function(){try{var raw=localStorage.getItem("leadscout.theme.v1");var theme=raw?JSON.parse(raw):"dark";if(theme==="light"){document.documentElement.classList.remove("dark");}}catch(e){}})();`;

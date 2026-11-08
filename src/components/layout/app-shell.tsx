@@ -1,34 +1,20 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Header, MobileNavCloseButton } from "@/components/layout/header";
+import { BottomNav } from "@/components/layout/bottom-nav";
+import { Header } from "@/components/layout/header";
 import { CONTAINER_CLASS } from "@/components/layout/container";
 import { SidebarContent } from "@/components/layout/sidebar";
 import { OsmAttribution } from "@/components/osm-attribution";
 
+/**
+ * Two layouts from one tree: from `lg` a website with a sidebar; below it
+ * (phones, tablets, the installed app) an app with a top bar and a bottom
+ * tab bar, so every page is one thumb-tap away.
+ */
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [dismissedFor, setDismissedFor] = useState(pathname);
-
-  // Close the mobile drawer on navigation. This render-phase update is the
-  // documented pattern for adjusting state when a value changes, and it keeps
-  // the drawer in sync for programmatic navigation.
-  if (dismissedFor !== pathname) {
-    setDismissedFor(pathname);
-    setMobileOpen(false);
-  }
-
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [mobileOpen]);
 
   return (
     <div className="min-h-screen bg-app text-ink">
@@ -39,31 +25,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         Skip to main content
       </a>
 
-      {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-alt px-4 pb-5 md:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-alt px-4 pb-5 lg:block">
         <SidebarContent />
       </aside>
 
-      {/* Mobile drawer */}
-      {mobileOpen ? (
-        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Navigation menu">
-          <div
-            className="absolute inset-0 bg-[var(--scrim)]"
-            onClick={() => setMobileOpen(false)}
-            aria-hidden="true"
-          />
-          <div className="neu-float absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line bg-alt px-4 pb-5">
-            {/* Sits on the logo row (64px tall) rather than taking a row of its own. */}
-            <div className="absolute right-3 top-3 z-10">
-              <MobileNavCloseButton onClose={() => setMobileOpen(false)} />
-            </div>
-            <SidebarContent onNavigate={() => setMobileOpen(false)} />
-          </div>
-        </div>
-      ) : null}
-
-      <div className="md:pl-64">
-        <Header pathname={pathname} onOpenMobileNav={() => setMobileOpen(true)} />
+      {/* Bottom padding keeps the last content clear of the tab bar and the phone's home indicator. */}
+      <div className="pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:pl-64">
+        <Header pathname={pathname} />
         <main id="main-content" className={`${CONTAINER_CLASS} py-6`}>
           {children}
         </main>
@@ -73,6 +41,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </footer>
       </div>
+
+      <BottomNav pathname={pathname} />
     </div>
   );
 }

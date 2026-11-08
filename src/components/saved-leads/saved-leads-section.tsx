@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { BookmarkX, Download, MoreHorizontal, Undo2, X } from "lucide-react";
 import { CompanyTable } from "@/components/companies/company-table";
+import { ClearLocalData } from "@/components/layout/sidebar";
 import { BulkStatusControl } from "@/components/saved-leads/bulk-status-control";
 import { LeadBackupControls } from "@/components/saved-leads/lead-backup-controls";
 import { LeadNotesEditor } from "@/components/saved-leads/lead-notes-editor";
@@ -171,6 +172,11 @@ export function SavedLeadsSection() {
                 />
               </div>
             ) : null}
+            {/* The sidebar holds these from lg; phones and tablets have only the tab bar. */}
+            <div className="space-y-2 border-t border-line-soft pt-3 lg:hidden">
+              <p className="text-xs leading-relaxed text-ink3">Leads, notes and searches stay in this browser only.</p>
+              <ClearLocalData />
+            </div>
           </div>
         </details>
       </div>
