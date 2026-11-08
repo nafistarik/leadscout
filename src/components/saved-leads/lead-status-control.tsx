@@ -32,32 +32,39 @@ export function LeadStatusControl({
 }) {
   const status = entry?.status ?? "new";
   return (
-    <div className="flex flex-col items-end gap-1.5" aria-label={`Pipeline status for ${companyName}`} role="group">
+    // Right-aligned in the desktop table's action column, left-aligned on mobile cards.
+    <div className="flex flex-col items-start gap-1.5 md:items-end" aria-label={`Pipeline status for ${companyName}`} role="group">
       {followUpDue ? (
         <Badge tone="warning" title={`Follow-up date: ${entry?.followUpDate ?? ""}`}>
           Follow-up due
         </Badge>
       ) : null}
-      <Select
-        id={`${idPrefix}-status`}
-        value={status}
-        options={STATUS_OPTIONS}
-        onChange={(next) => onChange(next as LeadStatus)}
-        searchable={false}
-        size="sm"
-      />
-      {status === "lost" ? (
+      {/* Fixed widths: the menu is as wide as its trigger, and a trigger sized
+        to "New" would cut "Proposal sent" in the menu. */}
+      <div className="w-36">
         <Select
-          id={`${idPrefix}-lost-reason`}
-          value={entry?.lostReason ?? ""}
-          options={REASON_OPTIONS}
-          onChange={(next) => onChange("lost", (next || undefined) as LostReason | undefined)}
+          id={`${idPrefix}-status`}
+          value={status}
+          options={STATUS_OPTIONS}
+          onChange={(next) => onChange(next as LeadStatus)}
           searchable={false}
           size="sm"
-          placeholder="Reason (optional)"
-          allowClear
-          clearLabel="Clear lost reason"
         />
+      </div>
+      {status === "lost" ? (
+        <div className="w-48">
+          <Select
+            id={`${idPrefix}-lost-reason`}
+            value={entry?.lostReason ?? ""}
+            options={REASON_OPTIONS}
+            onChange={(next) => onChange("lost", (next || undefined) as LostReason | undefined)}
+            searchable={false}
+            size="sm"
+            placeholder="Reason (optional)"
+            allowClear
+            clearLabel="Clear lost reason"
+          />
+        </div>
       ) : null}
     </div>
   );

@@ -146,6 +146,29 @@ describe("selectPlaces", () => {
     expect(selectPlaces(rows, selectors, "PEDIATRIC").map((place) => place.id)).toEqual(["2"]);
     expect(selectPlaces(rows, selectors, "nothing, bright").map((place) => place.id)).toEqual(["2"]);
   });
+
+  test("one business listed under two ids appears once: same name and phone", () => {
+    const twins = [
+      row("a", { n: "Post House Dental", p: "+44 1932 731207" }),
+      row("b", { n: "post house  dental", p: "+441932731207", t: "general_dentistry" }),
+    ];
+    expect(selectPlaces(twins, [{ c: "dental_clinic" }], "").map((place) => place.id)).toEqual(["a"]);
+  });
+
+  test("without a phone, the same name at the same spot is one business", () => {
+    const twins = [row("a", { n: "Smile", lat: 51.36465, lon: -0.45942 }), row("b", { n: "Smile", lat: 51.36468, lon: -0.45939 })];
+    expect(selectPlaces(twins, [{ c: "dental_clinic" }], "").map((place) => place.id)).toEqual(["a"]);
+  });
+
+  test("branches sharing a name stay separate", () => {
+    const branches = [
+      row("a", { n: "Smile Dental", p: "+442000000001" }),
+      row("b", { n: "Smile Dental", p: "+442000000002" }),
+      row("c", { n: "Smile Dental", lat: 51.5, lon: -0.1 }),
+      row("d", { n: "Smile Dental", lat: 51.6, lon: -0.2 }),
+    ];
+    expect(selectPlaces(branches, [{ c: "dental_clinic" }], "").map((place) => place.id)).toEqual(["a", "b", "c", "d"]);
+  });
 });
 
 describe("searchOverture (stubbed host — no network)", () => {

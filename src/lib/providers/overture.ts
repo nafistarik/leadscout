@@ -179,7 +179,20 @@ export function placeToCompany(row: PlaceRow, city: ManifestCity, categoryLabel:
 }
 
 /**
- * Picks the rows that belong to the searched category and keyword.
+ * Identity of a business across Overture records: it sometimes lists one
+ * place twice under different ids. Same name plus same phone, or (without a
+ * phone) the same spot to ~100 m, is one business. Name alone is not
+ * enough: branches share names but not phones or addresses.
+ */
+function businessKey(row: PlaceRow): string {
+  const name = row.n.trim().toLowerCase().replace(/\s+/g, " ");
+  const phone = row.p?.replace(/\D/g, "");
+  return phone ? `${name}|${phone}` : `${name}|${row.lat.toFixed(3)},${row.lon.toFixed(3)}`;
+}
+
+/**
+ * Picks the rows that belong to the searched category and keyword, keeping
+ * the first record of each business.
  *
  * @param keyword Comma-separated chips; a row matches when its name or fine
  *   category contains any of them (case-insensitive).
@@ -188,12 +201,14 @@ export function selectPlaces(rows: PlaceRow[], selectors: OvertureSelector[], ke
   const chips = parseKeywordChips(keyword).map((chip) => chip.toLowerCase());
   const seen = new Set<string>();
   return rows.filter((row) => {
-    if (seen.has(row.id) || !selectors.some((selector) => matchesSelector(row, selector))) return false;
+    const key = businessKey(row);
+    if (seen.has(row.id) || seen.has(key) || !selectors.some((selector) => matchesSelector(row, selector))) return false;
     if (chips.length > 0) {
       const haystack = `${row.n} ${(row.t ?? row.c).replace(/_/g, " ")}`.toLowerCase();
       if (!chips.some((chip) => haystack.includes(chip))) return false;
     }
     seen.add(row.id);
+    seen.add(key);
     return true;
   });
 }
