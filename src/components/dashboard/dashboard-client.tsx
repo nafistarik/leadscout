@@ -154,7 +154,7 @@ function GettingStarted() {
       <h3 id="start-heading" className="text-base font-semibold tracking-tight text-ink">
         How it works
       </h3>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {STEPS.map((step) => (
           <Card key={step.title}>
             <CardBody>
@@ -217,7 +217,7 @@ export function DashboardClient() {
         <h3 id="metrics-heading" className="mb-4 text-base font-semibold tracking-tight text-ink">
           Overview
         </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <MetricCard
             label="Searches"
             value={String(stats.totalSearches)}

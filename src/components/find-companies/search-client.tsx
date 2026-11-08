@@ -295,7 +295,7 @@ export function SearchClient() {
             {/* Top-aligned cells: every cell lays out label first, then its
               control, so inputs and the action buttons share one baseline
               even when hints or keyword chips change a cell's height. */}
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-4 md:grid-cols-[1fr_1fr_auto]">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_1fr_auto]">
               <Field label="City" htmlFor="search-city">
                 <TextInput
                   id="search-city"
@@ -350,7 +350,7 @@ export function SearchClient() {
 
               {/* The invisible label spacer lines the buttons up with the inputs. */}
               <div className="flex flex-col">
-                <span aria-hidden="true" className="mb-1.5 hidden select-none text-[13px] font-medium invisible md:block">
+                <span aria-hidden="true" className="mb-1.5 hidden select-none text-[13px] font-medium invisible lg:block">
                   Search actions
                 </span>
                 <div className="flex gap-3">
@@ -369,9 +369,9 @@ export function SearchClient() {
               </div>
 
               {/* Rarely needed controls stay folded so the form reads as "city + type → Search". */}
-              <details open={moreOptionsOpen} className="md:col-span-3">
+              <details open={moreOptionsOpen} className="lg:col-span-3">
                 <summary className="cursor-pointer text-xs font-medium text-accent-ink select-none">More options</summary>
-                <div className="mt-3 grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+                <div className="mt-3 grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
                   <Field label="Country" htmlFor="search-country" hint="Only needed when a city name exists in several countries.">
                     <Select
                       id="search-country"

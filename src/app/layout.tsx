@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   },
   description:
     "LeadScout helps freelance web developers discover real local businesses that may need a website, using Overture Maps and OpenStreetMap data.",
+  applicationName: "LeadScout",
+  // iOS ignores most of the manifest; these make "Add to Home Screen" open full-screen with the right name.
+  appleWebApp: { capable: true, title: "LeadScout", statusBarStyle: "default" },
 };
 
 function ThemeInitScript() {

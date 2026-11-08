@@ -38,7 +38,7 @@ export function LeadNotesEditor({
   const dateId = `${idPrefix}-follow-up`;
 
   return (
-    <section className="mb-4 grid gap-3 border-b border-line-soft pb-4 sm:grid-cols-[1fr_12rem]">
+    <section className="mb-4 grid gap-3 border-b border-line-soft pb-4 lg:grid-cols-[1fr_12rem]">
       <div>
         <label htmlFor={notesId} className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink3">
           Your notes
