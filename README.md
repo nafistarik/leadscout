@@ -41,7 +41,7 @@ Three primary pages with a sidebar (plus mobile drawer) and a header carrying th
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Dashboard: introduction, four genuine statistics, Recent Searches |
+| `/` | Dashboard: introduction, your pipeline (follow-ups due, leads by status), four genuine statistics, Recent Searches |
 | `/find-companies` | Company search (prepared Overture data or live OpenStreetMap), results table, website checks, saving |
 | `/saved-leads` | All saved real businesses with the lead pipeline (status, notes, follow-ups, pitch message), contacts, website checks, CSV export, plus Recent Searches |
 
@@ -95,7 +95,9 @@ All data is **browser-local**: it does not sync across devices and is lost if br
 
 ## Dashboard statistics
 
-Derived locally from recorded successful searches (see `summarizeSearchStats` in `src/lib/search-history.ts`):
+Once a lead is saved, **Your pipeline** sits above the statistics: follow-ups due today (the first five by name) and a count per status. Each links to Saved Leads with that filter applied (`/saved-leads?status=due`, `?status=contacted`, …).
+
+Search statistics are derived locally from recorded successful searches (see `summarizeSearchStats` in `src/lib/search-history.ts`):
 
 - **Total Searches** — successfully recorded live searches (failures never count).
 - **Businesses Found** — cumulative results returned across recorded searches.

@@ -35,12 +35,25 @@ import {
   sortByIdOrder,
 } from "@/lib/filter-leads";
 import type { LeadSearchFilters, SortOrder } from "@/lib/filter-leads";
+import { findPreparedCity } from "@/lib/providers/overture";
 import { AUTO_RUN_PARAM, filtersToSearchParams, searchParamsToFilters } from "@/lib/search-params";
 import { PREPARED_CITIES } from "../../../scripts/overture/cities";
 
 /** Human name of the data source behind a result set. */
 function sourceName(providerId: string): string {
   return providerId === "overture" ? "Overture Maps" : "OpenStreetMap";
+}
+
+// Names and spellings only, to warn before searching; the hosted manifest
+// still decides at search time.
+const PREPARED_NAMES = {
+  release: "",
+  cities: PREPARED_CITIES.map((city) => ({ ...city, total: 0, categories: {} })),
+};
+
+/** Whether a search for this city will go to the slow live OpenStreetMap path. */
+export function isLiveCity(filters: Pick<LeadSearchFilters, "city" | "country">): boolean {
+  return filters.city.trim() !== "" && findPreparedCity(PREPARED_NAMES, filters.city, filters.country) === null;
 }
 
 /** Result sort orders for the shared non-searchable Select. */
@@ -86,14 +99,43 @@ function ErrorState({ error, onRetry }: { error: SearchError; onRetry: () => voi
   );
 }
 
-function LoadingState() {
+/**
+ * Matches OVERPASS_PHASE_MS in lib/providers/index.ts: after this long the
+ * live search gives up on the main servers and asks the backup search.
+ */
+const LIVE_BACKUP_AFTER_SECONDS = 25;
+
+/**
+ * Loading card. A prepared city answers in about two seconds; a live city
+ * can take a minute, so it counts the seconds and names the stage instead
+ * of looking stuck.
+ *
+ * @param live Whether the search goes to the live OpenStreetMap servers.
+ */
+function LoadingState({ live }: { live: boolean }) {
+  const [elapsed, setElapsed] = useState(0);
+  // A clock is outside React: tick once a second while a live search runs.
+  useEffect(() => {
+    if (!live) return;
+    const started = Date.now();
+    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [live]);
+
   return (
     <Card aria-busy="true" aria-live="polite">
       <CardBody className="px-6 py-8">
         <p className="flex items-center justify-center gap-2 text-sm font-medium text-ink2">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          Searching businesses…
+          {live ? `Searching OpenStreetMap live… ${elapsed}s` : "Loading prepared business data…"}
         </p>
+        {live ? (
+          <p className="mt-2 text-center text-xs text-ink3">
+            {elapsed < LIVE_BACKUP_AFTER_SECONDS
+              ? "Free public servers can take up to a minute. Prepared cities load in about two seconds."
+              : "The main servers are slow right now, so LeadScout is trying the backup search."}
+          </p>
+        ) : null}
         <div className="mt-6 space-y-3" aria-hidden="true">
           {[0, 1, 2].map((index) => (
             <div key={index} className="neu-recessed h-14 animate-pulse rounded-lg bg-recessed" />
@@ -251,6 +293,12 @@ export function SearchClient() {
                     <option key={city.id} value={city.name} />
                   ))}
                 </datalist>
+                {isLiveCity(filters) ? (
+                  <p className="mt-1 text-xs text-status-warning-fg">
+                    Not a prepared city: it is searched live on free public servers, which takes 20–60 seconds and
+                    finds fewer phone numbers and emails.
+                  </p>
+                ) : null}
               </Field>
 
               <Field label="Business category" htmlFor="search-category" hint="Categories work in every city.">
@@ -311,7 +359,7 @@ export function SearchClient() {
 
         <div aria-live="polite">
           {status === "loading" ? (
-            <LoadingState />
+            <LoadingState live={submittedFilters !== null && isLiveCity(submittedFilters)} />
           ) : error ? (
             <ErrorState error={error} onRetry={retry} />
           ) : status === "success" && meta ? (

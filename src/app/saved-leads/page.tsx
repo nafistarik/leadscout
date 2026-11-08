@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { RecentSearchesSection } from "@/components/recent-searches/recent-searches-section";
 import { SavedLeadsSection } from "@/components/saved-leads/saved-leads-section";
 
@@ -14,7 +15,10 @@ export default function SavedLeadsPage() {
         Businesses you saved from search results, with their contact details and website checks.
         Saved leads stay in this browser after a refresh.
       </p>
-      <SavedLeadsSection />
+      {/* The section reads ?status= (links from the Dashboard), which needs a Suspense boundary. */}
+      <Suspense fallback={<p className="text-sm text-ink3">Loading saved leads…</p>}>
+        <SavedLeadsSection />
+      </Suspense>
       <RecentSearchesSection />
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { BookmarkX, Download } from "lucide-react";
 import { CompanyTable } from "@/components/companies/company-table";
 import { LeadNotesEditor } from "@/components/saved-leads/lead-notes-editor";
@@ -17,6 +18,15 @@ import type { LeadStatus } from "@/lib/lead-pipeline";
 import { cn } from "@/lib/storage";
 
 type StatusFilter = LeadStatus | "all" | "due";
+
+/** Query parameter the Dashboard links with, e.g. /saved-leads?status=due. */
+export const STATUS_FILTER_PARAM = "status";
+
+/** A filter from the URL, or "all" for anything missing or unknown. */
+export function parseStatusFilter(value: string | null): StatusFilter {
+  if (value === "due") return "due";
+  return LEAD_STATUSES.find((status) => status === value) ?? "all";
+}
 
 /**
  * One-row status filter with a count per status; statuses with no leads
@@ -77,7 +87,11 @@ export function SavedLeadsSection() {
   const { records, storageAvailable, isCompanySaved, toggleCompany } = useSavedLeads();
   const checks = useWebsiteChecks();
   const { entryFor, statusOf, setStatus, updateDetails, markContacted, followUpDue } = useLeadPipeline();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const searchParams = useSearchParams();
+  // The URL only picks the starting filter; clicks after that stay on the page.
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() =>
+    parseStatusFilter(searchParams.get(STATUS_FILTER_PARAM)),
+  );
 
   const counts = Object.fromEntries(LEAD_STATUSES.map((status) => [status, 0])) as Record<LeadStatus, number>;
   for (const record of records) counts[statusOf(record.id)] += 1;
