@@ -40,7 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
 
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-alt px-4 py-5 md:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-alt px-4 pb-5 md:block">
         <SidebarContent />
       </aside>
 
@@ -52,8 +52,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
-          <div className="neu-float absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line bg-alt px-4 py-5">
-            <div className="mb-4 flex justify-end">
+          <div className="neu-float absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line bg-alt px-4 pb-5">
+            {/* Sits on the logo row (64px tall) rather than taking a row of its own. */}
+            <div className="absolute right-3 top-3 z-10">
               <MobileNavCloseButton onClose={() => setMobileOpen(false)} />
             </div>
             <SidebarContent onNavigate={() => setMobileOpen(false)} />

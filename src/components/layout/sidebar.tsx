@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Bookmark, LayoutDashboard, Search, Telescope, Trash2 } from "lucide-react";
+import { Bookmark, LayoutDashboard, Search, Trash2 } from "lucide-react";
 import { notifyStorageChanged } from "@/hooks/use-local-storage-value";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
-import { STORAGE_KEYS } from "@/lib/storage";
-import { cn } from "@/lib/storage";
+import { STORAGE_KEYS, cn } from "@/lib/storage";
 
 export const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -74,11 +73,26 @@ function ClearLocalData() {
     <button
       type="button"
       onClick={() => setConfirming(true)}
-      className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-ink2 transition-colors hover:bg-recessed hover:text-status-error-fg"
+      className="inline-flex cursor-pointer items-center gap-1.5 rounded-md text-xs font-medium text-ink3 transition-colors hover:text-status-error-fg"
     >
-      <Trash2 className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+      <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       Clear local data
     </button>
+  );
+}
+
+/**
+ * The LeadScout wordmark. Two files, one per theme, because the blue that
+ * reads on the light surface is too dark on the dark one.
+ */
+export function Wordmark({ className }: { className?: string }) {
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element -- a 14 KB local PNG gains nothing from the image optimizer */}
+      <img src="/brand/leadscout-wordmark.png" alt="LeadScout" width={549} height={90} className={cn("w-auto dark:hidden", className)} />
+      {/* eslint-disable-next-line @next/next/no-img-element -- see above */}
+      <img src="/brand/leadscout-wordmark-dark.png" alt="LeadScout" width={549} height={90} className={cn("hidden w-auto dark:block", className)} />
+    </>
   );
 }
 
@@ -88,22 +102,13 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      <Link
-        href="/"
-        onClick={onNavigate}
-        className="flex items-center gap-2.5 rounded-lg px-2 py-2"
-        aria-label="LeadScout home"
-      >
-        <span className="neu-raised-sm flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-on-accent">
-          <Telescope className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <span className="text-[17px] font-bold tracking-tight text-ink">
-          LeadScout
-        </span>
+      <Link href="/" onClick={onNavigate} className="-mx-4 flex h-16 shrink-0 items-center border-b border-line px-7" aria-label="LeadScout home">
+        <Wordmark className="h-[26px]" />
       </Link>
 
       <nav aria-label="Primary" className="mt-6 flex-1">
-        <ul className="space-y-1">
+        <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-ink3">Menu</p>
+        <ul className="enter-stagger space-y-1">
           {NAV_ITEMS.map((item) => {
             const active = isActive(pathname, item.href);
             const Icon = item.icon;
@@ -114,23 +119,22 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                     active
-                      ? "neu-recessed bg-recessed font-semibold text-accent-ink"
+                      ? "bg-accent-soft font-semibold text-accent-ink"
                       : "font-medium text-ink2 hover:bg-recessed hover:text-ink",
                   )}
                 >
-                  {active ? (
-                    <span
-                      aria-hidden="true"
-                      className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r bg-accent"
-                    />
-                  ) : null}
-                  <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                  <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-accent-ink" : "text-ink3")} aria-hidden="true" />
                   {item.label}
                   {/* Saving gives visible feedback: the count grows where the leads went. */}
                   {item.href === "/saved-leads" && savedCount > 0 ? (
-                    <span className="ml-auto rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold tabular-nums text-accent-ink">
+                    <span
+                      className={cn(
+                        "ml-auto min-w-6 rounded-full px-1.5 py-0.5 text-center text-[11px] font-semibold tabular-nums",
+                        active ? "bg-accent text-on-accent" : "bg-recessed text-ink2",
+                      )}
+                    >
                       {savedCount}
                     </span>
                   ) : null}
@@ -141,7 +145,10 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </ul>
       </nav>
 
-      <div className="mt-6 border-t border-line-soft pt-4">
+      <div className="mt-6 space-y-3 rounded-xl border border-line-soft bg-recessed p-3">
+        <p className="text-xs leading-relaxed text-ink2">
+          Your leads, notes and searches stay in this browser. Use <span className="font-medium text-ink">Saved Leads › More</span> to back them up.
+        </p>
         <ClearLocalData />
       </div>
     </div>

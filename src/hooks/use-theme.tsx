@@ -13,13 +13,13 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: "light",
+  theme: "dark",
   setTheme: () => undefined,
   toggleTheme: () => undefined,
 });
 
 function readTheme(): ThemeMode {
-  if (typeof document === "undefined") return "light";
+  if (typeof document === "undefined") return "dark";
   return document.documentElement.classList.contains("dark") ? "dark" : "light";
 }
 
@@ -50,7 +50,7 @@ function subscribeToTheme(callback: () => void): () => void {
  * the DOM class — so there is no effect-driven hydration and no mismatch.
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const theme = useSyncExternalStore(subscribeToTheme, readTheme, () => "light" as ThemeMode);
+  const theme = useSyncExternalStore(subscribeToTheme, readTheme, () => "dark" as ThemeMode);
 
   const setTheme = useCallback((next: ThemeMode) => {
     applyTheme(next);

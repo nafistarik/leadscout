@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function SavedLeadsPage() {
   return (
-    <div className="space-y-8">
+    <div className="enter-stagger space-y-8">
       {/* The section reads ?status= (links from the Dashboard), which needs a Suspense boundary. */}
       <Suspense fallback={<p className="text-sm text-ink3">Loading saved leads…</p>}>
         <SavedLeadsSection />

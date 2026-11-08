@@ -5,10 +5,11 @@ import { useTheme } from "@/hooks/use-theme";
 import { CONTAINER_CLASS } from "@/components/layout/container";
 import { cn } from "@/lib/storage";
 
-const TITLES: Record<string, { title: string; trail: string }> = {
-  "/": { title: "Dashboard", trail: "Home / Dashboard" },
-  "/find-companies": { title: "Find Companies", trail: "Home / Find Companies" },
-  "/saved-leads": { title: "Saved Leads", trail: "Home / Saved Leads" },
+/** Each page's title and one line on what it is for (the app is too shallow for a breadcrumb). */
+const TITLES: Record<string, { title: string; subtitle: string }> = {
+  "/": { title: "Dashboard", subtitle: "Follow-ups due and how your outreach is going" },
+  "/find-companies": { title: "Find Companies", subtitle: "Search any city for businesses that need a website" },
+  "/saved-leads": { title: "Saved Leads", subtitle: "Message your leads and track every reply" },
 };
 
 function ThemeSwitch() {
@@ -54,10 +55,10 @@ export function Header({
   pathname: string;
   onOpenMobileNav: () => void;
 }) {
-  const meta = TITLES[pathname] ?? { title: "LeadScout", trail: "Home" };
+  const meta = TITLES[pathname] ?? { title: "LeadScout", subtitle: "" };
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-app/95 backdrop-blur">
+    <header className="enter-drop sticky top-0 z-20 border-b border-line bg-app/95 backdrop-blur">
       <div className={`${CONTAINER_CLASS} flex h-16 items-center gap-3`}>
         <button
           type="button"
@@ -69,10 +70,8 @@ export function Header({
         </button>
 
         <div className="min-w-0 flex-1">
-          <p className="hidden text-xs text-ink3 sm:block">{meta.trail}</p>
-          <h1 className="truncate text-lg font-semibold tracking-tight text-ink">
-            {meta.title}
-          </h1>
+          <h1 className="truncate text-lg font-semibold leading-tight tracking-tight text-ink">{meta.title}</h1>
+          {meta.subtitle ? <p className="hidden truncate text-xs text-ink3 sm:block">{meta.subtitle}</p> : null}
         </div>
 
         <ThemeSwitch />

@@ -285,7 +285,7 @@ export function SearchClient() {
   const paused = checks.pausedUntil > 0;
 
   return (
-    <div className="space-y-8">
+    <div className="enter-stagger space-y-8">
       <section aria-labelledby="search-heading" className="space-y-6">
         <h2 id="search-heading" className="sr-only">
           Search companies

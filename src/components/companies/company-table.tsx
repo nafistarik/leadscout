@@ -92,6 +92,11 @@ const HEADER_CLASS = "px-4 py-3 text-xs font-semibold uppercase tracking-wide te
  * desktop, cards on mobile. Shows the pitch opportunity, every known
  * contact, an on-demand website check, and an expandable details panel.
  */
+/** First rows enter one after another; past the sixth they share a delay so a long list never waits. */
+function enterDelay(index: number): React.CSSProperties {
+  return { animationDelay: `${Math.min(index, 6) * 0.12}s` };
+}
+
 export function CompanyTable({
   companies,
   isSaved,
@@ -132,15 +137,16 @@ export function CompanyTable({
             </tr>
           </thead>
           <tbody>
-            {companies.map((company) => {
+            {companies.map((company, index) => {
               const saved = isSaved(company.id);
               const open = expanded.has(company.id);
               const { details, site, state, analysis, opportunity } = rowInsights(company, checks);
               return (
                 <Fragment key={company.id}>
                   <tr
+                    style={enterDelay(index)}
                     className={cn(
-                      "align-top transition-colors hover:bg-recessed",
+                      "enter-card align-top transition-colors hover:bg-recessed",
                       open ? "bg-recessed" : "border-b border-line-soft last:border-0",
                     )}
                   >
@@ -215,12 +221,12 @@ export function CompanyTable({
 
       {/* Cards on phones, tablets and small laptops */}
       <ul className="space-y-3 xl:hidden">
-        {companies.map((company) => {
+        {companies.map((company, index) => {
           const saved = isSaved(company.id);
           const open = expanded.has(company.id);
           const { details, site, state, analysis, opportunity } = rowInsights(company, checks);
           return (
-            <li key={company.id}>
+            <li key={company.id} style={enterDelay(index)} className="enter-card">
               <div className="neu-raised-sm rounded-xl border border-line-soft bg-raised p-4">
                 <div className="flex items-start gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-ink">

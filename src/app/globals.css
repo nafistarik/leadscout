@@ -319,6 +319,74 @@ input[type="text"]:autofill {
   transform: none;
 }
 
+/*
+ * Entrance motion, matching the portfolio: one ease-out curve, a short rise,
+ * and a blur that clears on cards. Fill is "backwards" only, so a finished
+ * element keeps no transform or filter (either would trap the fixed-position
+ * select panel and keep the element on its own GPU layer).
+ */
+:root {
+  --enter-ease: cubic-bezier(0.33, 1, 0.68, 1);
+  --enter-stagger: 0.12s;
+}
+
+@keyframes enter-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes enter-card {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+    filter: blur(6px);
+  }
+}
+
+@keyframes enter-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+/* Headings and sections: each direct child rises in turn. */
+.enter-stagger > * {
+  animation: enter-fade-up 0.85s var(--enter-ease) backwards;
+}
+/* Cards in a grid: each direct child rises out of a blur in turn. */
+.enter-cards > * {
+  animation: enter-card 1s var(--enter-ease) backwards;
+}
+.enter-stagger > :nth-child(2),
+.enter-cards > :nth-child(2) {
+  animation-delay: calc(var(--enter-stagger) * 1);
+}
+.enter-stagger > :nth-child(3),
+.enter-cards > :nth-child(3) {
+  animation-delay: calc(var(--enter-stagger) * 2);
+}
+.enter-stagger > :nth-child(4),
+.enter-cards > :nth-child(4) {
+  animation-delay: calc(var(--enter-stagger) * 3);
+}
+.enter-stagger > :nth-child(n + 5),
+.enter-cards > :nth-child(n + 5) {
+  animation-delay: calc(var(--enter-stagger) * 4);
+}
+
+/* A single card in a long list; its delay is set inline from its position. */
+.enter-card {
+  animation: enter-card 1s var(--enter-ease) backwards;
+}
+
+/* The header, in view on load. */
+.enter-drop {
+  animation: enter-drop 0.7s var(--enter-ease) backwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -326,5 +394,13 @@ input[type="text"]:autofill {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* A delayed entrance would still hide the element during its delay. */
+  .enter-stagger > *,
+  .enter-cards > *,
+  .enter-card,
+  .enter-drop {
+    animation: none !important;
   }
 }

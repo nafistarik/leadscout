@@ -16,8 +16,9 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#e9eef5",
-    theme_color: "#e9eef5",
+    // Dark is the default theme, so the splash screen and title bar match it.
+    background_color: "#161d29",
+    theme_color: "#161d29",
     categories: ["business", "productivity"],
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

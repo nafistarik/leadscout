@@ -41,7 +41,7 @@ function PipelineSection() {
       <h3 id="pipeline-heading" className="mb-4 text-base font-semibold tracking-tight text-ink">
         Your pipeline
       </h3>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="enter-cards grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardBody>
             <div className="flex items-center justify-between">
@@ -154,7 +154,7 @@ function GettingStarted() {
       <h3 id="start-heading" className="text-base font-semibold tracking-tight text-ink">
         How it works
       </h3>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="enter-cards grid grid-cols-1 gap-4 lg:grid-cols-3">
         {STEPS.map((step) => (
           <Card key={step.title}>
             <CardBody>
@@ -186,7 +186,7 @@ export function DashboardClient() {
   const stats = summarizeSearchStats(history);
 
   return (
-    <div className="space-y-8">
+    <div className="enter-stagger space-y-8">
       <section aria-labelledby="welcome-heading" className="neu-raised rounded-2xl border border-line-soft bg-raised p-6 sm:p-8">
         <h2 id="welcome-heading" className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
           Find businesses that need a website
@@ -217,7 +217,7 @@ export function DashboardClient() {
         <h3 id="metrics-heading" className="mb-4 text-base font-semibold tracking-tight text-ink">
           Overview
         </h3>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="enter-cards grid grid-cols-1 gap-4 lg:grid-cols-3">
           <MetricCard
             label="Searches"
             value={String(stats.totalSearches)}
