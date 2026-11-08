@@ -136,6 +136,11 @@ export function setLeadStatus(
   return withEntry(map, id, next);
 }
 
+/** The same status for many leads at once, as one new map (a lost reason is cleared). */
+export function setLeadStatusMany(map: LeadPipelineMap, ids: string[], status: LeadStatus, now: string): LeadPipelineMap {
+  return ids.reduce((next, id) => setLeadStatus(next, id, status, now), map);
+}
+
 /**
  * Records a message the user confirmed sending from the app: counts it,
  * stamps the time, and moves a new lead to "contacted". A lead already
@@ -192,4 +197,30 @@ export function localDateString(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** Statuses that mean the business answered at some point. */
+const ANSWERED: readonly LeadStatus[] = ["replied", "proposal-sent", "won"];
+
+export interface PipelineRates {
+  /** Leads that were contacted: anything past New, except Not a fit. */
+  reached: number;
+  replied: number;
+  won: number;
+  /** Whole percentages, or null before anyone was reached. */
+  replyRate: number | null;
+  winRate: number | null;
+}
+
+/**
+ * How well outreach works: of the leads contacted, how many answered and how
+ * many became projects. A lost lead counts as reached but not answered,
+ * since the app cannot tell whether a lost lead replied first.
+ */
+export function pipelineRates(statuses: LeadStatus[]): PipelineRates {
+  const reached = statuses.filter((status) => status !== "new" && status !== "not-a-fit").length;
+  const replied = statuses.filter((status) => ANSWERED.includes(status)).length;
+  const won = statuses.filter((status) => status === "won").length;
+  const percent = (part: number) => (reached === 0 ? null : Math.round((part / reached) * 100));
+  return { reached, replied, won, replyRate: percent(replied), winRate: percent(won) };
 }

@@ -113,5 +113,7 @@ export function useSavedLeads() {
     isCompanySaved,
     toggleCompany,
     restoreRecord,
+    /** Replaces the whole list; used by backup import after merging. */
+    setRecords,
   };
 }

@@ -9,6 +9,7 @@ import {
   recordContact,
   sanitizePipelineMap,
   setLeadStatus,
+  setLeadStatusMany,
   updateLeadDetails,
 } from "@/lib/lead-pipeline";
 import type { LeadPipelineEntry, LeadPipelineMap, LeadStatus, LostReason } from "@/lib/lead-pipeline";
@@ -33,6 +34,14 @@ export function useLeadPipeline() {
     [pipeline, setPipeline],
   );
 
+  /** One status for many leads in a single write (separate writes would overwrite each other). */
+  const setStatusForMany = useCallback(
+    (ids: string[], status: LeadStatus) => {
+      setPipeline(setLeadStatusMany(pipeline, ids, status, new Date().toISOString()));
+    },
+    [pipeline, setPipeline],
+  );
+
   const markContacted = useCallback(
     (id: string) => setPipeline(recordContact(pipeline, id, new Date().toISOString())),
     [pipeline, setPipeline],
@@ -51,5 +60,15 @@ export function useLeadPipeline() {
 
   const statusOf = useCallback((id: string) => effectiveStatus(pipeline[id]), [pipeline]);
 
-  return { pipeline, entryFor, statusOf, setStatus, markContacted, updateDetails, followUpDue };
+  return {
+    pipeline,
+    setPipeline,
+    entryFor,
+    statusOf,
+    setStatus,
+    setStatusForMany,
+    markContacted,
+    updateDetails,
+    followUpDue,
+  };
 }

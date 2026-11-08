@@ -75,6 +75,9 @@ export function OpportunityBadge({ opportunity }: { opportunity: Opportunity }) 
   );
 }
 
+/** Labels that need no explanation in the list; their reason stays in Details. */
+const SELF_EXPLAINING_LABELS = new Set(["No website", "Social page only"]);
+
 export function OpportunityCell({ opportunity }: { opportunity: Opportunity }) {
   return (
     <div className="space-y-1.5">
@@ -82,9 +85,11 @@ export function OpportunityCell({ opportunity }: { opportunity: Opportunity }) {
         <OpportunityBadge opportunity={opportunity} />
         <span className="text-[13px] font-medium text-ink">{opportunity.label}</span>
       </div>
-      <p className="line-clamp-2 max-w-56 text-xs text-ink3" title={opportunity.reasons.join("\n")}>
-        {opportunity.reasons[0]}
-      </p>
+      {SELF_EXPLAINING_LABELS.has(opportunity.label) ? null : (
+        <p className="line-clamp-2 max-w-56 text-xs text-ink3" title={opportunity.reasons.join("\n")}>
+          {opportunity.reasons[0]}
+        </p>
+      )}
     </div>
   );
 }
@@ -247,18 +252,16 @@ export function WebsiteCheckCell({
   if (details.websiteKind !== "site") {
     const [maps, search] = researchLinks(company);
     return (
+      // The opportunity column already says "No website" / "Social page only"; only the next step goes here.
       <div className="space-y-1">
-        <p className="text-xs text-ink3">
-          {details.websiteKind === "none" ? "No website listed" : "Social page only — no site to check"}
-        </p>
         {details.likelyWebsite ? (
           <p className="flex flex-wrap items-center gap-x-1 text-xs text-status-warning-fg">
             Likely site (from email):
             <ExternalTextLink href={details.likelyWebsite}>{details.likelyWebsite.replace(/^https:\/\//, "")}</ExternalTextLink>
           </p>
         ) : null}
-        <p className="flex flex-wrap items-center gap-x-2 text-xs text-ink3">
-          Verify:
+        <p className="flex items-center gap-x-2 whitespace-nowrap text-xs text-ink3">
+          Look up:
           <ExternalTextLink href={search.href}>Google</ExternalTextLink>
           <ExternalTextLink href={maps.href}>Maps</ExternalTextLink>
         </p>

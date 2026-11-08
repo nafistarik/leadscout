@@ -30,6 +30,25 @@ interface CompanyTableProps {
   renderLeadActions?: (company: Company, layout: "table" | "card") => ReactNode;
   /** Extra content at the top of an opened details panel (notes, follow-up). */
   renderLeadDetails?: (company: Company, layout: "table" | "card") => ReactNode;
+  /** Text of the save toggle once saved ("Remove" where every lead is saved). */
+  savedLabel?: string;
+  /** Text of the details toggle when closed. */
+  detailsLabel?: string;
+  /** Folds the research details (why pitch, business, website check) under the extra content. */
+  foldInsights?: boolean;
+}
+
+/** Research details, optionally folded so contacting the lead comes first. */
+function Insights({ fold, children }: { fold: boolean; children: ReactNode }) {
+  if (!fold) return children;
+  return (
+    <details>
+      <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-ink3 select-none">
+        Business details & website check
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
+  );
 }
 
 function rowInsights(company: Company, checks: WebsiteChecks) {
@@ -41,7 +60,17 @@ function rowInsights(company: Company, checks: WebsiteChecks) {
   return { details, site, state, analysis, opportunity };
 }
 
-function DetailsToggle({ open, onToggle, name }: { open: boolean; onToggle: () => void; name: string }) {
+function DetailsToggle({
+  open,
+  onToggle,
+  name,
+  label,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  name: string;
+  label: string;
+}) {
   return (
     <button
       type="button"
@@ -50,7 +79,7 @@ function DetailsToggle({ open, onToggle, name }: { open: boolean; onToggle: () =
       aria-label={`${open ? "Hide" : "Show"} details for ${name}`}
       className="inline-flex cursor-pointer items-center gap-1 rounded px-1 py-1 text-xs font-medium text-accent-ink underline-offset-2 hover:underline"
     >
-      {open ? "Hide details" : "Details"}
+      {open ? "Hide" : label}
       <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden="true" />
     </button>
   );
@@ -70,6 +99,9 @@ export function CompanyTable({
   caption,
   renderLeadActions,
   renderLeadDetails,
+  savedLabel,
+  detailsLabel = "Details",
+  foldInsights = false,
 }: CompanyTableProps) {
   const checks = useWebsiteChecks();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
@@ -151,8 +183,9 @@ export function CompanyTable({
                           saved={saved}
                           onToggle={() => onToggleSaved(company)}
                           companyName={company.name}
+                          savedLabel={savedLabel}
                         />
-                        <DetailsToggle open={open} onToggle={() => toggle(company.id)} name={company.name} />
+                        <DetailsToggle open={open} onToggle={() => toggle(company.id)} name={company.name} label={detailsLabel} />
                       </div>
                     </td>
                   </tr>
@@ -161,12 +194,14 @@ export function CompanyTable({
                       <td colSpan={5} className="px-5 pb-5 pt-1">
                         <div className="neu-raised-sm rounded-lg border border-line-soft bg-raised p-4">
                           {renderLeadDetails?.(company, "table")}
-                          <LeadDetailsPanel
-                            company={company}
-                            details={details}
-                            opportunity={opportunity}
-                            analysis={analysis}
-                          />
+                          <Insights fold={foldInsights}>
+                            <LeadDetailsPanel
+                              company={company}
+                              details={details}
+                              opportunity={opportunity}
+                              analysis={analysis}
+                            />
+                          </Insights>
                         </div>
                       </td>
                     </tr>
@@ -219,13 +254,16 @@ export function CompanyTable({
                     saved={saved}
                     onToggle={() => onToggleSaved(company)}
                     companyName={company.name}
+                    savedLabel={savedLabel}
                   />
-                  <DetailsToggle open={open} onToggle={() => toggle(company.id)} name={company.name} />
+                  <DetailsToggle open={open} onToggle={() => toggle(company.id)} name={company.name} label={detailsLabel} />
                 </div>
                 {open ? (
                   <div className="mt-4 border-t border-line-soft pt-4">
                     {renderLeadDetails?.(company, "card")}
-                    <LeadDetailsPanel company={company} details={details} opportunity={opportunity} analysis={analysis} />
+                    <Insights fold={foldInsights}>
+                      <LeadDetailsPanel company={company} details={details} opportunity={opportunity} analysis={analysis} />
+                    </Insights>
                   </div>
                 ) : null}
               </div>

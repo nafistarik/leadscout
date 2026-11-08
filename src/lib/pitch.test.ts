@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { describeOsmDetails } from "@/lib/osm-details";
-import { buildPitch, mailtoLink, pitchLanguageFor, sanitizeSignature, shortBusinessName, whatsappLink } from "@/lib/pitch";
+import {
+  buildFollowUp,
+  buildPitch,
+  mailtoLink,
+  pitchLanguageFor,
+  sanitizeSignature,
+  shortBusinessName,
+  whatsappLink,
+} from "@/lib/pitch";
 import type { WebsiteAnalysis } from "@/lib/website-analysis";
 import type { Company } from "@/types/company";
 
@@ -113,6 +121,22 @@ describe("buildPitch", () => {
     const lead = company({ website: "https://smile.example" });
     expect(buildPitch(lead, describeOsmDetails(lead), null, SIGNED, "en").body).toContain("have a few ideas");
     expect(buildPitch(lead, describeOsmDetails(lead), analysis([]), SIGNED, "en").body).toContain("have a few ideas");
+  });
+});
+
+describe("buildFollowUp", () => {
+  test("a short nudge by the short name, signed, in English", () => {
+    const pitch = buildFollowUp(company({ name: "Smile Dental | Implants" }), SIGNED, "en");
+    expect(pitch.subject).toBe("Following up: a website for Smile Dental");
+    expect(pitch.body.startsWith("Hi Smile Dental team,")).toBe(true);
+    expect(pitch.body).toContain("didn't get lost");
+    expect(pitch.body.endsWith("Best regards,\nNafis\nhttps://nafis.example")).toBe(true);
+  });
+
+  test("in Bangla, with a placeholder when no name is saved", () => {
+    const pitch = buildFollowUp(company({ name: "হালাব রেস্তোরা" }), { name: "", link: "" }, "bn");
+    expect(pitch.body.startsWith("হ্যালো হালাব রেস্তোরা,")).toBe(true);
+    expect(pitch.body.endsWith("ধন্যবাদ,\n[আপনার নাম]")).toBe(true);
   });
 });
 

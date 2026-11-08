@@ -21,13 +21,16 @@ import { Field, TextInput } from "@/components/ui/field";
 import { KeywordChipsInput } from "@/components/ui/keyword-chips-input";
 import { Select } from "@/components/ui/select";
 import { countrySearchOptions } from "@/data/countries";
-import { CATEGORY_OPTIONS, MAX_RESULTS_SELECT_OPTIONS } from "@/data/search-options";
+import { CATEGORY_OPTIONS, MAX_RESULTS_OPTIONS, MAX_RESULTS_SELECT_OPTIONS } from "@/data/search-options";
 import { useSearchHistory } from "@/hooks/use-search-history";
 import { useCompanySearch } from "@/hooks/use-company-search";
 import type { SearchError } from "@/hooks/use-company-search";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
 import { useWebsiteChecks } from "@/hooks/use-website-analysis";
 import { describeOsmDetails } from "@/lib/osm-details";
+import { applyQuickFilters, QUICK_FILTER_LABELS, QUICK_FILTERS } from "@/lib/quick-filters";
+import type { QuickFilter } from "@/lib/quick-filters";
+import { cn } from "@/lib/storage";
 import {
   EMPTY_FILTERS,
   PROVIDER_FILTER_KEYS,
@@ -43,6 +46,9 @@ import { PREPARED_CITIES } from "../../../scripts/overture/cities";
 function sourceName(providerId: string): string {
   return providerId === "overture" ? "Overture Maps" : "OpenStreetMap";
 }
+
+/** One-click city buttons under the city field; the rest of the 21 come up while typing. */
+const QUICK_CITIES = ["Dhaka", "Chattogram", "London", "Dubai", "New York", "Toronto"];
 
 // Names and spellings only, to warn before searching; the hosted manifest
 // still decides at search time.
@@ -162,6 +168,11 @@ export function SearchClient() {
   const [sort, setSort] = useState<SortOrder>("provider");
   const autoRunFired = useRef(false);
   const resultsRef = useRef<HTMLDivElement>(null);
+  const [quickFilters, setQuickFilters] = useState<ReadonlySet<QuickFilter>>(new Set());
+  // Open "More options" only when a shared link already uses one of them.
+  const [moreOptionsOpen] = useState(
+    () => filters.country !== "" || filters.keyword !== "" || filters.maxResults !== EMPTY_FILTERS.maxResults,
+  );
   const scrollAfterSearch = useRef(false);
 
   // Scrolling is outside React: once a phone search settles, bring its results into view.
@@ -245,10 +256,20 @@ export function SearchClient() {
   );
   // Static ISO list: built once, filtered per keystroke inside the control.
   const countryOptions = useMemo(() => countrySearchOptions(), []);
-  const displayed = useMemo(
-    () => sortByIdOrder(companies, names, sort),
-    [companies, names, sort],
-  );
+  const sorted = useMemo(() => sortByIdOrder(companies, names, sort), [companies, names, sort]);
+  const displayed = applyQuickFilters(sorted, quickFilters, isCompanySaved);
+
+  function toggleQuickFilter(filter: QuickFilter) {
+    setQuickFilters((current) => {
+      const next = new Set(current);
+      if (next.has(filter)) next.delete(filter);
+      else next.add(filter);
+      return next;
+    });
+  }
+
+  // "Show more" asks the next larger result limit; prepared cities answer from loaded files.
+  const nextLimit = MAX_RESULTS_OPTIONS.find((option) => option > (submittedFilters?.maxResults ?? Infinity));
 
   const uncheckedSites = useMemo(
     () =>
@@ -274,25 +295,8 @@ export function SearchClient() {
             {/* Top-aligned cells: every cell lays out label first, then its
               control, so inputs and the action buttons share one baseline
               even when hints or keyword chips change a cell's height. */}
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <Field label="Country (optional)" htmlFor="search-country" hint="Narrows the place lookup. Type to search all countries.">
-                <Select
-                  id="search-country"
-                  value={filters.country}
-                  options={countryOptions}
-                  onChange={(next) => update("country", next)}
-                  placeholder="e.g. Germany"
-                  allowClear
-                  clearLabel="Clear country"
-                  emptyText="No countries match your search"
-                />
-              </Field>
-
-              <Field
-                label="City or region"
-                htmlFor="search-city"
-                hint="Required. Suggested cities load instantly with full contact data; any other city is searched live."
-              >
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-4 md:grid-cols-[1fr_1fr_auto]">
+              <Field label="City" htmlFor="search-city">
                 <TextInput
                   id="search-city"
                   type="text"
@@ -311,13 +315,29 @@ export function SearchClient() {
                 </datalist>
                 {isLiveCity(filters) ? (
                   <p className="mt-1 text-xs text-status-warning-fg">
-                    Not a prepared city: it is searched live on free public servers, which takes 20–60 seconds and
-                    finds fewer phone numbers and emails.
+                    Not a ready city: searched live, takes 20–60 seconds and finds fewer phones and emails.
                   </p>
                 ) : null}
+                <div className="mt-2 flex flex-wrap items-center gap-1.5" aria-label="Ready cities">
+                  <span className="text-xs text-ink3">Ready:</span>
+                  {QUICK_CITIES.map((city) => (
+                    <button
+                      key={city}
+                      type="button"
+                      onClick={() => setFilters((current) => ({ ...current, city, country: "" }))}
+                      className={cn(
+                        "cursor-pointer rounded-md border px-2 py-0.5 text-xs font-medium transition-colors",
+                        filters.city === city ? "border-transparent bg-accent text-on-accent" : "border-line-soft bg-raised text-ink2 hover:text-ink",
+                      )}
+                    >
+                      {city}
+                    </button>
+                  ))}
+                  <span className="text-xs text-ink3">+{PREPARED_CITIES.length - QUICK_CITIES.length} more as you type</span>
+                </div>
               </Field>
 
-              <Field label="Business category" htmlFor="search-category" hint="Categories work in every city.">
+              <Field label="Business type" htmlFor="search-category">
                 <Select
                   id="search-category"
                   value={filters.category}
@@ -328,30 +348,9 @@ export function SearchClient() {
                 />
               </Field>
 
-              <Field label="Keywords (optional)" htmlFor="search-keyword" hint="Press Enter or comma to add each keyword.">
-                <KeywordChipsInput
-                  id="search-keyword"
-                  value={filters.keyword}
-                  onChange={(next) => update("keyword", next)}
-                  placeholder="e.g. bakery, dental"
-                />
-              </Field>
-
-              <Field label="Maximum results" htmlFor="search-max">
-                <Select
-                  id="search-max"
-                  value={String(filters.maxResults)}
-                  options={MAX_RESULTS_SELECT_OPTIONS}
-                  onChange={(next) => update("maxResults", Number(next))}
-                  searchable={false}
-                />
-              </Field>
-
-              {/* Action cell: the invisible label spacer mirrors Field
-                labels so the buttons align with the inputs, not with the
-                bottom of taller cells. No margin hacks, no fixed heights. */}
-              <div className="flex flex-col md:col-span-2 xl:col-span-1">
-                <span aria-hidden="true" className="mb-1.5 block select-none text-[13px] font-medium invisible">
+              {/* The invisible label spacer lines the buttons up with the inputs. */}
+              <div className="flex flex-col">
+                <span aria-hidden="true" className="mb-1.5 hidden select-none text-[13px] font-medium invisible md:block">
                   Search actions
                 </span>
                 <div className="flex gap-3">
@@ -361,14 +360,49 @@ export function SearchClient() {
                     ) : (
                       <Search className="h-4 w-4" aria-hidden="true" />
                     )}
-                    Search Companies
+                    Search
                   </Button>
-                  <Button type="button" variant="secondary" onClick={handleReset}>
+                  <Button type="button" variant="secondary" onClick={handleReset} aria-label="Reset search">
                     <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                    Reset
                   </Button>
                 </div>
               </div>
+
+              {/* Rarely needed controls stay folded so the form reads as "city + type → Search". */}
+              <details open={moreOptionsOpen} className="md:col-span-3">
+                <summary className="cursor-pointer text-xs font-medium text-accent-ink select-none">More options</summary>
+                <div className="mt-3 grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+                  <Field label="Country" htmlFor="search-country" hint="Only needed when a city name exists in several countries.">
+                    <Select
+                      id="search-country"
+                      value={filters.country}
+                      options={countryOptions}
+                      onChange={(next) => update("country", next)}
+                      placeholder="Any country"
+                      allowClear
+                      clearLabel="Clear country"
+                      emptyText="No countries match your search"
+                    />
+                  </Field>
+                  <Field label="Keywords" htmlFor="search-keyword" hint="Press Enter or comma to add each keyword.">
+                    <KeywordChipsInput
+                      id="search-keyword"
+                      value={filters.keyword}
+                      onChange={(next) => update("keyword", next)}
+                      placeholder="e.g. implant, bridal"
+                    />
+                  </Field>
+                  <Field label="Results per search" htmlFor="search-max">
+                    <Select
+                      id="search-max"
+                      value={String(filters.maxResults)}
+                      options={MAX_RESULTS_SELECT_OPTIONS}
+                      onChange={(next) => update("maxResults", Number(next))}
+                      searchable={false}
+                    />
+                  </Field>
+                </div>
+              </details>
             </form>
           </CardBody>
         </Card>
@@ -401,6 +435,7 @@ export function SearchClient() {
                   <p className="text-sm text-ink2">
                     <strong className="font-semibold text-ink">
                       {displayed.length} result{displayed.length === 1 ? "" : "s"}
+                      {displayed.length !== sorted.length ? ` of ${sorted.length}` : ""}
                     </strong>
                     <span className="text-ink3">
                       {" "}
@@ -430,33 +465,49 @@ export function SearchClient() {
                           Cancel
                         </Button>
                       </>
-                    ) : (
+                    ) : uncheckedSites.length > 0 ? (
                       <Button
                         type="button"
                         variant="secondary"
                         size="sm"
-                        disabled={uncheckedSites.length === 0}
                         onClick={() => checks.checkMany(uncheckedSites)}
                         title="Load each listed homepage and look for dated or broken signs (one at a time)"
                       >
                         <ScanSearch className="h-3.5 w-3.5" aria-hidden="true" />
-                        {uncheckedSites.length === 0
-                          ? "All shown websites checked"
-                          : `Check ${uncheckedSites.length} website${uncheckedSites.length === 1 ? "" : "s"}`}
+                        Check {uncheckedSites.length} website{uncheckedSites.length === 1 ? "" : "s"}
                       </Button>
-                    )}
+                    ) : null}
                   </div>
+                </div>
+                <div role="group" aria-label="Narrow these results" className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-ink3">Show only:</span>
+                  {QUICK_FILTERS.map((filter) => {
+                    const active = quickFilters.has(filter);
+                    return (
+                      <button
+                        key={filter}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => toggleQuickFilter(filter)}
+                        className={cn(
+                          "cursor-pointer rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                          active ? "border-transparent bg-accent text-on-accent" : "border-line-soft bg-raised text-ink2 hover:text-ink",
+                        )}
+                      >
+                        {QUICK_FILTER_LABELS[filter]}
+                      </button>
+                    );
+                  })}
                 </div>
                 {isDirty ? (
                   <p role="status" className="neu-recessed rounded-lg bg-recessed p-3 text-[13px] text-status-info-fg">
-                    Search criteria changed since these results were fetched — select Search Companies to
-                    refresh.
+                    You changed the search. Press Search to update these results.
                   </p>
                 ) : null}
                 {meta.truncated ? (
                   <p className="text-xs leading-relaxed text-ink3">
                     {meta.providerId === "overture"
-                      ? `Showing the best ${displayed.length} of ${meta.examined.toLocaleString("en")} matches — businesses without a website come first. ${submittedFilters?.keyword.trim() ? "Raise Maximum results to see others." : "Raise Maximum results or add a keyword to see others."}`
+                      ? `Showing the best ${sorted.length} of ${meta.examined.toLocaleString("en")} matches, easiest to pitch first.`
                       : "Server limit reached — more businesses may exist in this area."}
                   </p>
                 ) : null}
@@ -464,19 +515,36 @@ export function SearchClient() {
                   <p className="text-xs leading-relaxed text-status-warning-fg">{meta.coverageNote}</p>
                 ) : null}
                 {checks.notice ? <p className="text-xs text-status-warning-fg">{checks.notice}</p> : null}
-                <CompanyTable
-                  companies={displayed}
-                  isSaved={isCompanySaved}
-                  onToggleSaved={toggleCompany}
-                  caption={`Company search results from ${sourceName(meta.providerId)}`}
-                />
+                {displayed.length === 0 ? (
+                  <p className="text-sm text-ink2">None of these results match the selected filters.</p>
+                ) : (
+                  <CompanyTable
+                    companies={displayed}
+                    isSaved={isCompanySaved}
+                    onToggleSaved={toggleCompany}
+                    caption={`Company search results from ${sourceName(meta.providerId)}`}
+                  />
+                )}
+                {meta.truncated && nextLimit && submittedFilters ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      const snapshot = { ...submittedFilters, maxResults: nextLimit };
+                      setFilters(snapshot);
+                      submitFilters(snapshot);
+                    }}
+                  >
+                    Show more (up to {nextLimit})
+                  </Button>
+                ) : null}
               </div>
             )
           ) : (
             <EmptyState
               icon={<MapPin className="h-6 w-6" aria-hidden="true" />}
-              title="Search live business data"
-              description="Enter a city or region, optionally narrow by country, category, or keyword, then select Search Companies."
+              title="Find businesses to pitch"
+              description="Pick a ready city above (or type any city), choose a business type, then Search."
               action={null}
             />
           )}

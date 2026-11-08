@@ -319,7 +319,7 @@ export async function searchOverture(
       examined: ranked.length,
       areaKm2: bboxAreaKm2({ west, south, east, north }),
       coverageNote: allBusinesses
-        ? `“All businesses” in a prepared city searches ${ALL_BUSINESSES_CATEGORIES.length} common client types (${ALL_BUSINESSES_CATEGORIES.join(", ")}). Pick a category for anything else.`
+        ? `“All businesses” covers ${ALL_BUSINESSES_CATEGORIES.length} common client types (restaurants, salons, clinics, hotels…). Pick a category for others.`
         : null,
     },
   };

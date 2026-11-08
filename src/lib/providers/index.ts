@@ -63,8 +63,11 @@ export function providerRequestKey(request: ProviderSearchRequest): string {
   return requestKey(request);
 }
 
+/** Largest list a search returns; matches the top "Maximum results" option. */
+const MAX_RESULT_LIMIT = 100;
+
 function resultLimit(maxResults: number): number {
-  return Number.isFinite(maxResults) && maxResults > 0 ? Math.min(Math.floor(maxResults), 50) : 10;
+  return Number.isFinite(maxResults) && maxResults > 0 ? Math.min(Math.floor(maxResults), MAX_RESULT_LIMIT) : 10;
 }
 
 async function runSearch(

@@ -26,7 +26,7 @@ export type HistoryInput = Omit<SearchHistoryEntry, "id" | "searchedAt">;
 export const MAX_HISTORY_ENTRIES = 10;
 
 /** Bounds per-entry website-id storage; maxResults never exceeds this. */
-const MAX_WEBSITE_IDS = 50;
+const MAX_WEBSITE_IDS = 100;
 
 function toResultCount(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0

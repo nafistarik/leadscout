@@ -235,7 +235,16 @@ export function exportFilename(now: Date = new Date()): string {
 
 /** Triggers a client-side download; revokes the object URL afterwards. */
 export function downloadCsv(csv: string, filename: string): void {
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  downloadText(csv, filename, "text/csv;charset=utf-8");
+}
+
+/**
+ * Downloads text as a file without any server round trip.
+ *
+ * @param type The file's MIME type, e.g. "application/json".
+ */
+export function downloadText(text: string, filename: string, type: string): void {
+  const blob = new Blob([text], { type });
   const url = URL.createObjectURL(blob);
   try {
     const link = document.createElement("a");

@@ -5,11 +5,27 @@ import {
   isValidDateString,
   localDateString,
   MAX_NOTES_LENGTH,
+  pipelineRates,
   recordContact,
   sanitizePipelineMap,
   setLeadStatus,
+  setLeadStatusMany,
   updateLeadDetails,
 } from "@/lib/lead-pipeline";
+
+describe("setLeadStatusMany", () => {
+  test("sets every listed lead, keeps their notes, clears a lost reason, leaves others alone", () => {
+    const map = setLeadStatusMany(
+      { a: { notes: "keep me" }, b: { status: "lost", lostReason: "no-budget" }, c: { status: "won" } },
+      ["a", "b"],
+      "contacted",
+      "2026-11-08T10:00:00.000Z",
+    );
+    expect(map.a).toEqual({ notes: "keep me", status: "contacted", statusChangedAt: "2026-11-08T10:00:00.000Z" });
+    expect(map.b).toEqual({ status: "contacted", statusChangedAt: "2026-11-08T10:00:00.000Z" });
+    expect(map.c).toEqual({ status: "won" });
+  });
+});
 
 const T1 = "2026-11-08T10:00:00.000Z";
 const T2 = "2026-11-09T10:00:00.000Z";
@@ -138,5 +154,17 @@ describe("dates", () => {
 
   test("localDateString pads month and day from the local calendar", () => {
     expect(localDateString(new Date(2026, 0, 5, 23, 30))).toBe("2026-01-05");
+  });
+});
+
+describe("pipelineRates", () => {
+  test("counts reached, replied and won leads; new and not-a-fit were never contacted", () => {
+    const rates = pipelineRates(["new", "not-a-fit", "contacted", "contacted", "replied", "proposal-sent", "won", "lost"]);
+    expect(rates).toEqual({ reached: 6, replied: 3, won: 1, replyRate: 50, winRate: 17 });
+  });
+
+  test("no rates before anyone is contacted", () => {
+    expect(pipelineRates(["new", "not-a-fit"])).toEqual({ reached: 0, replied: 0, won: 0, replyRate: null, winRate: null });
+    expect(pipelineRates([]).replyRate).toBeNull();
   });
 });

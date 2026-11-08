@@ -68,13 +68,14 @@ describe("sanitizeHistory", () => {
         id: "a",
         city: "x".repeat(500),
         resultCount: 7.9,
-        websiteIds: Array.from({ length: 80 }, (_, i) => `osm:node/${i}`),
+        websiteIds: Array.from({ length: 130 }, (_, i) => `osm:node/${i}`),
         searchedAt: "x",
       },
     ]);
     expect(cleaned[0].city).toHaveLength(80);
     expect(cleaned[0].resultCount).toBe(7);
-    expect(cleaned[0].websiteIds).toHaveLength(50);
+    // Matches the largest "Maximum results" option (100).
+    expect(cleaned[0].websiteIds).toHaveLength(100);
   });
 });
 

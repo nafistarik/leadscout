@@ -4,7 +4,7 @@
  * the dedicated dataset (`data/categories.ts`); city stays free text.
  */
 
-export const MAX_RESULTS_OPTIONS = [5, 10, 25, 50] as const;
+export const MAX_RESULTS_OPTIONS = [5, 10, 25, 50, 100] as const;
 
 /** Result-limit options for the shared Select (values stay numeric strings). */
 export const MAX_RESULTS_SELECT_OPTIONS: { value: string; label: string }[] =

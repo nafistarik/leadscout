@@ -8,7 +8,7 @@ import { useLocalStorageValue } from "@/hooks/use-local-storage-value";
 import { useWebsiteChecks } from "@/hooks/use-website-analysis";
 import { phoneHref } from "@/lib/links";
 import { describeOsmDetails } from "@/lib/osm-details";
-import { buildPitch, mailtoLink, pitchLanguageFor, sanitizeSignature, whatsappLink } from "@/lib/pitch";
+import { buildFollowUp, buildPitch, mailtoLink, pitchLanguageFor, sanitizeSignature, whatsappLink } from "@/lib/pitch";
 import type { PitchLanguage, PitchSignature } from "@/lib/pitch";
 import { STORAGE_KEYS, cn } from "@/lib/storage";
 import type { Company } from "@/types/company";
@@ -63,20 +63,59 @@ function SignatureFields({
   );
 }
 
+type MessageKind = "first" | "follow-up";
+const KIND_LABELS: Record<MessageKind, string> = { first: "First message", "follow-up": "Follow-up" };
+
+/** A small one-of-several switch, as used for message kind and language. */
+function ToggleGroup<T extends string>({
+  label,
+  labels,
+  value,
+  onChange,
+}: {
+  label: string;
+  labels: Record<T, string>;
+  value: T;
+  onChange: (next: T) => void;
+}) {
+  return (
+    <div role="group" aria-label={label} className="flex gap-1">
+      {(Object.keys(labels) as T[]).map((option) => (
+        <button
+          key={option}
+          type="button"
+          aria-pressed={value === option}
+          onClick={() => onChange(option)}
+          className={cn(
+            "cursor-pointer rounded-md border px-2 py-0.5 text-[11px] font-medium",
+            value === option ? "border-transparent bg-accent text-on-accent" : "border-line-soft bg-raised text-ink2",
+          )}
+        >
+          {labels[option]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /**
- * First-contact message for one saved lead with one-click WhatsApp, email
- * and copy. LeadScout cannot see whether a message was sent, so after a
- * channel opens it asks the user and only then records the contact.
+ * Message for one saved lead (a first pitch, or a short follow-up once they
+ * were contacted) with one-click WhatsApp, email and copy. LeadScout cannot
+ * see whether a message was sent, so after a channel opens it asks the user
+ * and only then records the contact.
  *
+ * @param alreadyContacted Opens on the follow-up message when true.
  * @param onContacted Called when the user confirms they sent the message.
  */
 export function LeadPitchPanel({
   idPrefix,
   company,
+  alreadyContacted,
   onContacted,
 }: {
   idPrefix: string;
   company: Company;
+  alreadyContacted: boolean;
   onContacted: () => void;
 }) {
   const checks = useWebsiteChecks();
@@ -88,12 +127,19 @@ export function LeadPitchPanel({
   const phones = [...new Set([...details.phones, ...(analysis?.phones ?? [])])];
   const emails = [...new Set([...details.emails, ...(analysis?.emails ?? [])])];
   const [language, setLanguage] = useState<PitchLanguage>(() => pitchLanguageFor(company, phones));
-  const pitch = buildPitch(company, details, analysis, signature, language);
+  const [kind, setKind] = useState<MessageKind>(alreadyContacted ? "follow-up" : "first");
+  const pitch =
+    kind === "first"
+      ? buildPitch(company, details, analysis, signature, language)
+      : buildFollowUp(company, signature, language);
   const [draft, setDraft] = useState({ base: pitch.body, text: pitch.body });
   const [askSent, setAskSent] = useState(false);
+  // Starts open when no name is saved yet, so filling name then link happens
+  // without the boxes collapsing in between; "Done" folds them.
+  const [editingSignature, setEditingSignature] = useState(() => !signature.name);
   const [copyNote, setCopyNote] = useState<string | null>(null);
 
-  // A new language, signature or website check rewrites the message;
+  // A new kind, language, signature or website check rewrites the message;
   // until then the user's own edits are kept.
   const text = draft.base === pitch.body ? draft.text : pitch.body;
   if (draft.base !== pitch.body) setDraft({ base: pitch.body, text: pitch.body });
@@ -120,30 +166,36 @@ export function LeadPitchPanel({
         <label htmlFor={messageId} className={cn(SECTION_LABEL, "mb-0")}>
           Pitch message
         </label>
-        <div role="group" aria-label="Message language" className="flex gap-1">
-          {(Object.keys(LANGUAGE_LABELS) as PitchLanguage[]).map((option) => (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={language === option}
-              onClick={() => setLanguage(option)}
-              className={cn(
-                "cursor-pointer rounded-md border px-2 py-0.5 text-[11px] font-medium",
-                language === option ? "border-transparent bg-accent text-on-accent" : "border-line-soft bg-raised text-ink2",
-              )}
-            >
-              {LANGUAGE_LABELS[option]}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-2">
+          <ToggleGroup label="Message kind" labels={KIND_LABELS} value={kind} onChange={setKind} />
+          <ToggleGroup label="Message language" labels={LANGUAGE_LABELS} value={language} onChange={setLanguage} />
         </div>
       </div>
 
-      {signature.name ? null : (
-        <p className="text-[11px] text-status-warning-fg">Add your name once below; it will sign every message.</p>
+      {/* Asked once; afterwards a one-line reminder with an Edit link. */}
+      {signature.name && !editingSignature ? (
+        <p className="text-[11px] text-ink3">
+          Signed as {signature.name}
+          {signature.link ? ` · ${signature.link.replace(/^https?:\/\//, "")}` : ""} ·{" "}
+          <button type="button" onClick={() => setEditingSignature(true)} className="cursor-pointer font-medium text-accent-ink hover:underline">
+            Edit
+          </button>
+        </p>
+      ) : (
+        <>
+          {signature.name ? null : (
+            <p className="text-[11px] text-status-warning-fg">Add your name once; it will sign every message.</p>
+          )}
+          <SignatureFields idPrefix={idPrefix} signature={signature} onChange={setSignature} />
+          {editingSignature && signature.name ? (
+            <button type="button" onClick={() => setEditingSignature(false)} className="cursor-pointer text-[11px] font-medium text-accent-ink hover:underline">
+              Done
+            </button>
+          ) : null}
+        </>
       )}
-      <SignatureFields idPrefix={idPrefix} signature={signature} onChange={setSignature} />
 
-      <TextArea id={messageId} value={text} onChange={(event) => setDraft({ base: pitch.body, text: event.target.value })} rows={9} />
+      <TextArea id={messageId} value={text} onChange={(event) => setDraft({ base: pitch.body, text: event.target.value })} rows={7} />
       {details.likelyWebsite ? (
         <p className="text-[11px] text-status-warning-fg">
           Their email suggests a website at {details.likelyWebsite.replace(/^https:\/\//, "")}. Open it before sending,

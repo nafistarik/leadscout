@@ -177,6 +177,46 @@ export function buildPitch(
 }
 
 /**
+ * A short second message for a lead that has not answered the first one.
+ * Most replies come after a follow-up, so it stays brief and easy to answer.
+ */
+export function buildFollowUp(company: Company, signature: PitchSignature, language: PitchLanguage): Pitch {
+  const sender = signature.name || NAME_PLACEHOLDER[language];
+  const closing = [sender, signature.link].filter(Boolean).join("\n");
+  const name = shortBusinessName(company.name);
+  if (language === "bn") {
+    return {
+      subject: `${name}-এর ওয়েবসাইট নিয়ে`,
+      body: [
+        `হ্যালো ${name},`,
+        "",
+        "কিছুদিন আগে আপনাদের ওয়েবসাইট নিয়ে একটা মেসেজ দিয়েছিলাম, হয়তো চোখ এড়িয়ে গেছে।",
+        "আগ্রহ থাকলে আপনাদের জন্য একটা ফ্রি ডেমো ডিজাইন বানিয়ে দেখাতে পারি, কোনো বাধ্যবাধকতা ছাড়াই।",
+        "",
+        "শুধু “হ্যাঁ” লিখলেই হবে, আর এখন দরকার না থাকলে “না” লিখলেও আর বিরক্ত করব না।",
+        "",
+        "ধন্যবাদ,",
+        closing,
+      ].join("\n"),
+    };
+  }
+  return {
+    subject: `Following up: a website for ${name}`,
+    body: [
+      `Hi ${name} team,`,
+      "",
+      "I sent you a note about your website a few days ago and wanted to make sure it didn't get lost.",
+      "If it's useful, I can put together a free mock-up for you, with no obligation.",
+      "",
+      "A quick “yes” is all I need, and if now isn't the right time, just say so and I won't follow up again.",
+      "",
+      "Best regards,",
+      closing,
+    ].join("\n"),
+  };
+}
+
+/**
  * Mobile number prefixes for the prepared cities' countries. WhatsApp only
  * runs on mobiles, and a landline (+44 20…, +880 2…) would open a dead
  * chat. Countries not listed (and +1, where mobiles and landlines share

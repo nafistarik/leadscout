@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { BookmarkX, Download, Undo2, X } from "lucide-react";
+import { BookmarkX, Download, MoreHorizontal, Undo2, X } from "lucide-react";
 import { CompanyTable } from "@/components/companies/company-table";
+import { BulkStatusControl } from "@/components/saved-leads/bulk-status-control";
+import { LeadBackupControls } from "@/components/saved-leads/lead-backup-controls";
 import { LeadNotesEditor } from "@/components/saved-leads/lead-notes-editor";
 import { LeadPitchPanel } from "@/components/saved-leads/lead-pitch-panel";
 import { LeadStatusControl } from "@/components/saved-leads/lead-status-control";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClassName } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { useLeadPipeline } from "@/hooks/use-lead-pipeline";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
@@ -95,7 +97,7 @@ export function SavedLeadsSection() {
     toggleCompany(company);
   }
   const checks = useWebsiteChecks();
-  const { entryFor, statusOf, setStatus, updateDetails, markContacted, followUpDue } = useLeadPipeline();
+  const { entryFor, statusOf, setStatus, setStatusForMany, updateDetails, markContacted, followUpDue } = useLeadPipeline();
   const searchParams = useSearchParams();
   // The URL only picks the starting filter; clicks after that stay on the page.
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(() =>
@@ -127,22 +129,32 @@ export function SavedLeadsSection() {
           <h2 id="saved-leads-heading" className="text-base font-semibold tracking-tight text-ink">
             Saved leads ({records.length})
           </h2>
-          <p className="mt-1 max-w-2xl text-sm text-ink2">
-            Promising businesses you saved. They stay in this browser after a refresh.
-          </p>
+          <p className="mt-1 max-w-2xl text-sm text-ink2">Businesses you saved, kept in this browser.</p>
         </div>
-        {records.length > 0 ? (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleExport}
-            title="Download all saved leads as CSV"
-            aria-label={`Export all ${records.length} saved leads as CSV`}
-          >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            Export saved ({records.length})
-          </Button>
-        ) : null}
+        {/* Occasional actions share one menu so the page opens on the leads, not on buttons. */}
+        <details className="relative">
+          <summary className={buttonClassName("secondary", "sm", "list-none [&::-webkit-details-marker]:hidden")}>
+            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+            More
+          </summary>
+          <div className="neu-float absolute right-0 z-20 mt-2 w-72 space-y-3 rounded-lg border border-line-soft bg-overlay p-3">
+            {records.length > 0 ? (
+              <Button type="button" variant="secondary" size="sm" className="w-full justify-start" onClick={handleExport}>
+                <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                Download spreadsheet (CSV)
+              </Button>
+            ) : null}
+            <LeadBackupControls />
+            {companies.length > 1 ? (
+              <div className="border-t border-line-soft pt-3">
+                <BulkStatusControl
+                  count={companies.length}
+                  onApply={(status) => setStatusForMany(companies.map((company) => company.id), status)}
+                />
+              </div>
+            ) : null}
+          </div>
+        </details>
       </div>
 
       {!storageAvailable ? (
@@ -210,6 +222,9 @@ export function SavedLeadsSection() {
               isSaved={isCompanySaved}
               onToggleSaved={handleToggleSaved}
               caption="Saved leads"
+              savedLabel="Remove"
+              detailsLabel="Contact & notes"
+              foldInsights
               renderLeadActions={(company, layout) => (
                 <LeadStatusControl
                   idPrefix={`${layout}-${company.id}`}
@@ -224,6 +239,7 @@ export function SavedLeadsSection() {
                   <LeadPitchPanel
                     idPrefix={`${layout}-${company.id}`}
                     company={company}
+                    alreadyContacted={(entryFor(company.id)?.contactCount ?? 0) > 0 || statusOf(company.id) === "contacted"}
                     onContacted={() => markContacted(company.id)}
                   />
                   <LeadNotesEditor

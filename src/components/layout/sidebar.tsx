@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Bookmark, LayoutDashboard, Search, Telescope, Trash2 } from "lucide-react";
 import { notifyStorageChanged } from "@/hooks/use-local-storage-value";
+import { useSavedLeads } from "@/hooks/use-saved-leads";
 import { STORAGE_KEYS } from "@/lib/storage";
 import { cn } from "@/lib/storage";
 
@@ -83,6 +84,7 @@ function ClearLocalData() {
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const savedCount = useSavedLeads().records.length;
 
   return (
     <div className="flex h-full flex-col">
@@ -126,6 +128,12 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   ) : null}
                   <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                   {item.label}
+                  {/* Saving gives visible feedback: the count grows where the leads went. */}
+                  {item.href === "/saved-leads" && savedCount > 0 ? (
+                    <span className="ml-auto rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold tabular-nums text-accent-ink">
+                      {savedCount}
+                    </span>
+                  ) : null}
                 </Link>
               </li>
             );

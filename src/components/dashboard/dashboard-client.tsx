@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Bookmark, Building2, CalendarClock, Globe2, Search } from "lucide-react";
+import { Bookmark, Building2, CalendarClock, Search } from "lucide-react";
 import { RecentSearchesSection } from "@/components/recent-searches/recent-searches-section";
 import { STATUS_FILTER_PARAM } from "@/components/saved-leads/saved-leads-section";
-import { Button } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { useLeadPipeline } from "@/hooks/use-lead-pipeline";
 import { useSavedLeads } from "@/hooks/use-saved-leads";
 import { useSearchHistory } from "@/hooks/use-search-history";
-import { LEAD_STATUS_LABELS, LEAD_STATUSES } from "@/lib/lead-pipeline";
+import { LEAD_STATUS_LABELS, LEAD_STATUSES, pipelineRates } from "@/lib/lead-pipeline";
 import { summarizeSearchStats } from "@/lib/search-history";
 
 /** How many due leads are named on the Dashboard before "and N more". */
@@ -34,6 +34,7 @@ function PipelineSection() {
     status,
     count: records.filter((record) => statusOf(record.id) === status).length,
   })).filter((entry) => entry.count > 0);
+  const rates = pipelineRates(records.map((record) => statusOf(record.id)));
 
   return (
     <section aria-labelledby="pipeline-heading">
@@ -91,6 +92,11 @@ function PipelineSection() {
                 </li>
               ))}
             </ul>
+            <p className="mt-3 text-xs text-ink3">
+              {rates.reached === 0
+                ? "Reply and win rates appear once you contact a lead."
+                : `Of ${rates.reached} contacted: ${rates.replyRate}% replied · ${rates.winRate}% won`}
+            </p>
           </CardBody>
         </Card>
       </div>
@@ -125,6 +131,55 @@ function MetricCard({
   );
 }
 
+const STEPS = [
+  { title: "1. Find", text: "Pick a city and a business type. Ready cities answer in about two seconds." },
+  { title: "2. Pick", text: "Leads without a website, but with a phone or email, come first. Save the good ones." },
+  { title: "3. Contact", text: "Send the ready-made message on WhatsApp or email, then track replies and follow-ups." },
+];
+
+const FIRST_SEARCHES = [
+  { label: "Restaurants in Dhaka", href: "/find-companies?city=Dhaka&category=Restaurant&run=1" },
+  { label: "Beauty salons in Dhaka", href: "/find-companies?city=Dhaka&category=Beauty+Salon&run=1" },
+  { label: "Dentists in London", href: "/find-companies?city=London&category=Dental+Clinic&run=1" },
+  { label: "Cafes in Dubai", href: "/find-companies?city=Dubai&category=Coffee+Shop&run=1" },
+];
+
+/**
+ * Shown instead of the all-zero statistics until the first search: how the
+ * app works in three steps and one-click example searches.
+ */
+function GettingStarted() {
+  return (
+    <section aria-labelledby="start-heading" className="space-y-4">
+      <h3 id="start-heading" className="text-base font-semibold tracking-tight text-ink">
+        How it works
+      </h3>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {STEPS.map((step) => (
+          <Card key={step.title}>
+            <CardBody>
+              <p className="text-sm font-semibold text-ink">{step.title}</p>
+              <p className="mt-1 text-sm leading-relaxed text-ink2">{step.text}</p>
+            </CardBody>
+          </Card>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-ink2">Try one:</span>
+        {FIRST_SEARCHES.map((search) => (
+          <Link
+            key={search.href}
+            href={search.href}
+            className="rounded-md border border-line-soft bg-raised px-2.5 py-1 text-xs font-medium text-ink2 hover:text-ink"
+          >
+            {search.label}
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function DashboardClient() {
   const { records } = useSavedLeads();
   const { history } = useSearchHistory();
@@ -134,65 +189,56 @@ export function DashboardClient() {
     <div className="space-y-8">
       <section aria-labelledby="welcome-heading" className="neu-raised rounded-2xl border border-line-soft bg-raised p-6 sm:p-8">
         <h2 id="welcome-heading" className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-          Find your next web project client
+          Find businesses that need a website
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink2 sm:text-[15px]">
-          LeadScout helps freelance web developers discover local businesses that may need a website.
-          Search real companies via Overture Maps and OpenStreetMap, check their websites, and save promising leads.
+          Search any city for local businesses with no website or a weak one, send them a ready-made
+          message on WhatsApp or email, and track who replied. Free map data from Overture Maps and
+          OpenStreetMap.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <Link href="/find-companies">
-            <Button>
-              <Search className="h-4 w-4" aria-hidden="true" />
-              Find Companies
-            </Button>
+          <Link href="/find-companies" className={buttonClassName()}>
+            <Search className="h-4 w-4" aria-hidden="true" />
+            Find Companies
           </Link>
-          <Link href="/saved-leads">
-            <Button variant="secondary">
-              <Bookmark className="h-4 w-4" aria-hidden="true" />
-              View Saved Leads
-            </Button>
+          <Link href="/saved-leads" className={buttonClassName("secondary")}>
+            <Bookmark className="h-4 w-4" aria-hidden="true" />
+            Saved Leads
           </Link>
         </div>
       </section>
 
       <PipelineSection />
 
-      <section aria-labelledby="metrics-heading">
+      {stats.totalSearches === 0 && records.length === 0 ? (
+        <GettingStarted />
+      ) : (
+        <section aria-labelledby="metrics-heading">
         <h3 id="metrics-heading" className="mb-4 text-base font-semibold tracking-tight text-ink">
           Overview
         </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <MetricCard
-            label="Total Searches"
+            label="Searches"
             value={String(stats.totalSearches)}
-            hint="Successful live searches recorded"
+            hint="Searches that returned results"
             icon={<Search className="h-4 w-4" aria-hidden="true" />}
           />
           <MetricCard
-            label="Businesses Found"
+            label="Businesses found"
             value={String(stats.totalResults)}
-            hint="Cumulative results across recorded searches"
+            hint="Across all your searches"
             icon={<Building2 className="h-4 w-4" aria-hidden="true" />}
           />
           <MetricCard
-            label="Businesses with Websites"
-            value={String(stats.uniqueWebsites)}
-            hint="Unique businesses listing a website"
-            icon={<Globe2 className="h-4 w-4" aria-hidden="true" />}
-          />
-          <MetricCard
-            label="Saved Leads"
+            label="Saved leads"
             value={String(records.length)}
-            hint="Real businesses saved in this browser"
+            hint="Kept in this browser"
             icon={<Bookmark className="h-4 w-4" aria-hidden="true" />}
           />
         </div>
-        <p className="mt-3 text-xs leading-relaxed text-ink3">
-          Statistics are tracked locally from your successful searches — failed searches are never
-          counted, and counts grow as you search.
-        </p>
       </section>
+      )}
 
       <RecentSearchesSection />
     </div>
