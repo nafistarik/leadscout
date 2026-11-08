@@ -195,7 +195,13 @@ export function LeadPitchPanel({
         </>
       )}
 
-      <TextArea id={messageId} value={text} onChange={(event) => setDraft({ base: pitch.body, text: event.target.value })} rows={7} />
+      {/* rows only matters where the browser cannot size the box to its text. */}
+      <TextArea
+        id={messageId}
+        value={text}
+        onChange={(event) => setDraft({ base: pitch.body, text: event.target.value })}
+        rows={Math.max(8, text.split("\n").length + 4)}
+      />
       {details.likelyWebsite ? (
         <p className="text-[11px] text-status-warning-fg">
           Their email suggests a website at {details.likelyWebsite.replace(/^https:\/\//, "")}. Open it before sending,

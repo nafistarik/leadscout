@@ -38,6 +38,41 @@ interface SelectProps {
   emptyText?: string;
 }
 
+/** Where the open panel sits on screen; `top` or `bottom` is set, never both. */
+interface PanelPlacement {
+  left: number;
+  minWidth: number;
+  maxWidth: number;
+  maxHeight: number;
+  top?: number;
+  bottom?: number;
+}
+
+const PANEL_GAP = 4;
+const VIEWPORT_MARGIN = 8;
+/** Tall enough for every lead status (7) without a scrollbar. */
+const PANEL_MAX_HEIGHT = 320;
+
+/**
+ * Places the panel against the viewport rather than inside its parent, so a
+ * card or a scrolling table cannot clip it. Opens upward when the space
+ * below is short and the space above is larger.
+ */
+function placePanel(trigger: DOMRect): PanelPlacement {
+  const below = window.innerHeight - trigger.bottom - PANEL_GAP - VIEWPORT_MARGIN;
+  const above = trigger.top - PANEL_GAP - VIEWPORT_MARGIN;
+  const base = {
+    left: trigger.left,
+    minWidth: trigger.width,
+    // Long labels may widen the panel up to the screen's right edge.
+    maxWidth: Math.max(trigger.width, window.innerWidth - trigger.left - VIEWPORT_MARGIN),
+  };
+  if (below < 200 && above > below) {
+    return { ...base, bottom: window.innerHeight - trigger.top + PANEL_GAP, maxHeight: Math.min(PANEL_MAX_HEIGHT, above) };
+  }
+  return { ...base, top: trigger.bottom + PANEL_GAP, maxHeight: Math.min(PANEL_MAX_HEIGHT, below) };
+}
+
 function matchesQuery(option: SelectOption, query: string): boolean {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
@@ -95,7 +130,9 @@ export function Select({
 }: SelectProps) {
   const listId = useId();
   const triggerRef = useRef<{ focus: () => void } | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<PanelPlacement | null>(null);
   /** Null draft means "show the committed value"; any edit opens a draft. */
   const [draft, setDraft] = useState<string | null>(null);
   const [highlight, setHighlight] = useState(0);
@@ -114,6 +151,31 @@ export function Select({
   // path resets the draft, and wrapper blur reverts uncommitted text — so
   // external changes (reset, shared links, history) always show through.
 
+  // A fixed panel does not follow its trigger on its own: re-place it while
+  // the page or any scrolling parent moves, or the window resizes. A press
+  // outside closes it even when the trigger never took focus (Safari does
+  // not focus buttons on click, so the blur handler alone would miss it).
+  useEffect(() => {
+    if (!open) return;
+    const follow = () => {
+      if (wrapperRef.current) setPlacement(placePanel(wrapperRef.current.getBoundingClientRect()));
+    };
+    const pressOutside = (event: PointerEvent) => {
+      if (!wrapperRef.current?.contains(event.target as Node)) {
+        setDraft(null);
+        setOpen(false);
+      }
+    };
+    window.addEventListener("scroll", follow, true);
+    window.addEventListener("resize", follow);
+    document.addEventListener("pointerdown", pressOutside);
+    return () => {
+      window.removeEventListener("scroll", follow, true);
+      window.removeEventListener("resize", follow);
+      document.removeEventListener("pointerdown", pressOutside);
+    };
+  }, [open]);
+
   // Keep the keyboard-highlighted option visible while navigating.
   useEffect(() => {
     if (!open || activeIndex < 0) return;
@@ -129,6 +191,11 @@ export function Select({
     if (searchable) setDraft("");
     const selectedIndex = filtered.findIndex((option) => option.value === value);
     setHighlight(selectedIndex >= 0 ? selectedIndex : 0);
+    reveal();
+  }
+
+  function reveal() {
+    if (wrapperRef.current) setPlacement(placePanel(wrapperRef.current.getBoundingClientRect()));
     setOpen(true);
   }
 
@@ -234,6 +301,7 @@ export function Select({
 
   return (
     <div
+      ref={wrapperRef}
       className="relative"
       onBlur={(event) => {
         // Focus left the whole control (not just moved to the clear
@@ -265,7 +333,7 @@ export function Select({
             const query = event.target.value;
             setDraft(query);
             setHighlight(bestMatchIndex(options.filter((option) => matchesQuery(option, query)), query));
-            setOpen(true);
+            if (!open) reveal();
           }}
           onKeyDown={handleSearchKeyDown}
           className={cn(
@@ -328,8 +396,11 @@ export function Select({
           open && "rotate-180",
         )}
       />
-      {open && !disabled ? (
-        <div className="neu-float absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border border-line-soft bg-overlay py-1">
+      {open && !disabled && placement ? (
+        <div
+          style={placement}
+          className="neu-float fixed z-50 w-max overflow-y-auto rounded-lg border border-line-soft bg-overlay py-1"
+        >
           <ul role="listbox" id={listId} aria-label={`${id} options`}>
             {rows.map(({ key, header, option, index }) => {
               const isSelected = option.value === value;

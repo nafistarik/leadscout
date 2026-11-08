@@ -37,11 +37,12 @@ export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cn(FIELD_STYLES, props.className)} />;
 }
 
+/** Multi-line field that grows with its text (up to most of the screen) instead of scrolling inside. */
 export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
       {...props}
-      className={cn(FIELD_STYLES, "h-auto min-h-20 py-2", props.className)}
+      className={cn(FIELD_STYLES, "h-auto min-h-20 max-h-[70vh] py-2 [field-sizing:content]", props.className)}
     />
   );
 }

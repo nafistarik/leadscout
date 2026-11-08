@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { BookmarkX, Download, MoreHorizontal, Undo2, X } from "lucide-react";
 import { CompanyTable } from "@/components/companies/company-table";
@@ -117,6 +117,24 @@ export function SavedLeadsSection() {
     )
     .map((record) => record.company);
 
+  const menuRef = useRef<HTMLDetailsElement | null>(null);
+  // <details> has no light dismiss: close the More menu on a press outside it or on Escape.
+  useEffect(() => {
+    const close = (event: Event) => {
+      const menu = menuRef.current;
+      if (!menu?.open) return;
+      if (event instanceof KeyboardEvent ? event.key === "Escape" : !menu.contains(event.target as Node)) {
+        menu.open = false;
+      }
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, []);
+
   function handleExport() {
     const rows = savedRecordsToRows(records, (company) => checks.analysisFor(company.website), entryFor);
     downloadCsv(rowsToCsv(rows), exportFilename(new Date()));
@@ -132,7 +150,7 @@ export function SavedLeadsSection() {
           <p className="mt-1 max-w-2xl text-sm text-ink2">Businesses you saved, kept in this browser.</p>
         </div>
         {/* Occasional actions share one menu so the page opens on the leads, not on buttons. */}
-        <details className="relative">
+        <details ref={menuRef} className="relative">
           <summary className={buttonClassName("secondary", "sm", "list-none [&::-webkit-details-marker]:hidden")}>
             <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
             More
